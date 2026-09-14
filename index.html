@@ -47,10 +47,11 @@
             padding: 10px 25px; font-size: 14px; font-weight: bold; border-radius: 4px;
             cursor: pointer; text-transform: uppercase; transition: background 0.2s, transform 0.1s, opacity 0.2s;
         }
-        .btn:hover:not(:disabled) { background-color: var(--accent-hover); transform: translateY(-1px); }
+        .btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
         .btn:active:not(:disabled) { transform: translateY(1px); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-danger { background-color: #b71c1c; }
+        .btn-blue { background-color: #1976d2; } /* Цвет для кнопки рапорта */
         
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -61,18 +62,19 @@
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-card {
             background: var(--card-bg); border-top: 4px solid var(--accent-color);
-            padding: 30px; border-radius: 6px; width: 100%; max-width: 400px; position: relative; text-align: left;
+            padding: 30px; border-radius: 6px; width: 100%; max-width: 450px; position: relative; text-align: left;
             transform: scale(0.95) translateY(-10px); transition: transform 0.3s ease;
         }
         .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
         
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
-        .form-group input, .form-group select {
+        .form-group input, .form-group select, .form-group textarea {
             width: 100%; padding: 10px; background: #0b0c10; border: 1px solid var(--border-color);
-            color: #fff; border-radius: 4px; font-size: 14px; transition: border-color 0.2s; outline: none;
+            color: #fff; border-radius: 4px; font-size: 14px; transition: border-color 0.2s; outline: none; font-family: inherit;
         }
-        .form-group input:focus, .form-group select:focus { border-color: var(--accent-color); }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent-color); }
         .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; transition: color 0.2s; }
         .close-btn:hover { color: #fff; }
         .status-msg { margin-top: 15px; font-size: 13px; text-align: center; height: 18px; }
@@ -102,6 +104,7 @@
     </header>
 
     <main>
+        <!-- Экран для НЕавторизованных -->
         <div class="hero-card fade-in" id="hero-welcome">
             <div class="subtitle">Отдел Военной Полиции</div>
             <h1>Защита закона и порядка</h1>
@@ -109,13 +112,31 @@
             <button class="btn" onclick="openModal('auth-modal')">Войти в систему</button>
         </div>
 
-        <div class="hero-card hidden" id="user-profile-card">
-            <div class="subtitle">Личное дело офицера</div>
-            <h1 id="profile-name">Загрузка...</h1>
-            <p><strong>Статик:</strong> <span id="profile-static">-</span> | <strong>Звание:</strong> <span id="profile-rank">-</span> | <strong>Позывной:</strong> <span id="profile-callsign">-</span></p>
-            <br><button class="btn" id="logout-btn" style="background-color: #37474f;">Выйти</button>
+        <!-- ГЛАВНЫЙ ЭКРАН ПОСЛЕ ВХОДА (Dashboard) -->
+        <div class="hero-card hidden" id="dashboard-panel" style="max-width: 800px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div class="subtitle">Панель управления</div>
+                    <h1 id="profile-name">Загрузка...</h1>
+                    <p style="margin-top: 5px;">
+                        <strong>Статик:</strong> <span id="profile-static">-</span> | 
+                        <strong>Звание:</strong> <span id="profile-rank">-</span> | 
+                        <strong>Позывной:</strong> <span id="profile-callsign">-</span>
+                    </p>
+                </div>
+                <button class="btn" id="logout-btn" style="background-color: #37474f;">Выйти</button>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
+            
+            <h3 style="margin-top: 0; color: var(--text-muted); font-size: 14px; text-transform: uppercase;">Доступные действия</h3>
+            <div style="display: flex; gap: 15px;">
+                <!-- КНОПКА ОТКРЫТИЯ РАПОРТА -->
+                <button class="btn btn-blue" onclick="openModal('report-modal')">📄 Подать рапорт</button>
+            </div>
         </div>
 
+        <!-- Админ-панель (Кадры) -->
         <div class="hero-card hidden" id="admin-roster-panel" style="max-width: 900px; text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div><div class="subtitle">Управление кадрами</div><h1 style="margin-bottom:0;">Личный состав MP</h1></div>
@@ -148,7 +169,7 @@
             <button class="close-btn" onclick="closeModal('create-user-modal')">&times;</button>
             <h2>Добавить бойца</h2>
             <form id="create-user-form">
-                <div class="form-group"><label>Email (например: 12345@sang.local)</label><input type="text" id="new-email" required></div>
+                <div class="form-group"><label>Email</label><input type="text" id="new-email" required></div>
                 <div class="form-group"><label>Пароль (МИНИМУМ 6 СИМВОЛОВ)</label><input type="text" id="new-password" required minlength="6"></div>
                 <div class="form-group"><label>Статический ID</label><input type="text" id="new-static" required></div>
                 <div class="form-group"><label>Имя (IC)</label><input type="text" id="new-fullname" required></div>
@@ -160,22 +181,49 @@
         </div>
     </div>
 
+    <!-- НОВАЯ: Модалка подачи рапорта -->
+    <div class="modal-overlay" id="report-modal">
+        <div class="modal-card" style="border-top-color: #1976d2;"> <!-- Синяя полоска сверху -->
+            <button class="close-btn" onclick="closeModal('report-modal')">&times;</button>
+            <h2>Форма рапорта</h2>
+            <form id="report-form">
+                <div class="form-group">
+                    <label>Тип рапорта</label>
+                    <select id="report-type">
+                        <option value="Выдача взыскания">Рапорт на выдачу взыскания</option>
+                        <option value="Проделанная работа">Рапорт о проделанной работе</option>
+                        <option value="Запрос увольнения">Рапорт на увольнение / ПСЖ</option>
+                        <option value="Прочее">Прочее</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Суть / Описание ситуации</label>
+                    <textarea id="report-desc" placeholder="Подробно опишите ситуацию..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Материалы / Доказательства (ссылка)</label>
+                    <input type="text" id="report-proof" placeholder="https://imgur.com/... или YouTube">
+                </div>
+                <button type="submit" class="btn btn-blue" id="report-submit-btn" style="width: 100%;">Отправить рапорт</button>
+            </form>
+            <div class="status-msg" id="report-status-msg"></div>
+        </div>
+    </div>
+
     <script>
         // =========================================================
         // ВСТАВЬ СЮДА СВОИ КЛЮЧИ ИЗ SUPABASE:
         // =========================================================
-        const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
+        const SUPABASE_URL = 'ЗДЕСЬ_ВСТАВЬ_PROJECT_URL';
+        const SUPABASE_KEY = 'ЗДЕСЬ_ВСТАВЬ_ANON_PUBLIC_KEY';
         
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        // ВТОРОЙ КЛИЕНТ ТОЛЬКО ДЛЯ СОЗДАНИЯ ЮЗЕРОВ (чтобы не выбивало сессию Начальника)
         const supabaseCreator = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
             auth: { storageKey: 'temp-creator-key', persistSession: false }
         });
 
         function switchPanel(panelId) {
-            ['hero-welcome', 'user-profile-card', 'admin-roster-panel'].forEach(id => {
+            ['hero-welcome', 'dashboard-panel', 'admin-roster-panel'].forEach(id => {
                 const el = document.getElementById(id);
                 el.classList.add('hidden');
                 el.classList.remove('fade-in');
@@ -188,16 +236,17 @@
         window.openModal = (id) => document.getElementById(id).classList.add('active');
         window.closeModal = (id) => {
             document.getElementById(id).classList.remove('active');
-            document.getElementById('create-status-msg').innerText = ''; // Очистка статуса при закрытии
+            // Очищаем сообщения об ошибках при закрытии модалок
+            document.querySelectorAll('.status-msg').forEach(msg => msg.innerText = '');
         }
 
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => {
             const isProfileLoaded = document.getElementById('profile-name').innerText !== 'Загрузка...';
-            switchPanel(isProfileLoaded ? 'user-profile-card' : 'hero-welcome');
+            switchPanel(isProfileLoaded ? 'dashboard-panel' : 'hero-welcome');
         };
 
-        // Логика Входа
+        // Вход
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-submit-btn');
@@ -218,18 +267,23 @@
             }
         };
 
-        // Загрузка данных профиля
+        // Глобальные переменные для хранения данных бойца (понадобится для вебхука)
+        let currentUserData = null;
+
+        // Загрузка профиля (Dashboard)
         async function loadProfile(user) {
             const { data } = await supabaseClient.from('unit_roster').select('*').eq('id', user.id).single();
             if (data) {
-                switchPanel('user-profile-card');
+                currentUserData = data; // Сохраняем, чтобы использовать при отправке рапорта
+                switchPanel('dashboard-panel'); // Перекидываем на Главную с Панелью Управления
+                
                 document.getElementById('profile-name').innerText = data.full_name;
                 document.getElementById('profile-static').innerText = data.static;
                 document.getElementById('profile-rank').innerText = data.rank;
                 document.getElementById('profile-callsign').innerText = data.callsign || '-';
                 
                 const authBtn = document.getElementById('nav-auth-btn');
-                authBtn.innerText = 'Кабинет'; authBtn.onclick = () => switchPanel('user-profile-card');
+                authBtn.innerText = 'Кабинет'; authBtn.onclick = () => switchPanel('dashboard-panel');
 
                 if (data.rank.includes('Начальник') || data.rank.includes('Зам')) {
                     const navRoster = document.getElementById('nav-roster');
@@ -239,7 +293,44 @@
             }
         }
 
-        // Логика добавления бойца (С ИСПРАВЛЕННЫМИ БАГАМИ)
+        // --- ЛОГИКА ОТПРАВКИ РАПОРТА (ПОДГОТОВКА ПОД WEBHOOK) ---
+        document.getElementById('report-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('report-submit-btn');
+            const msg = document.getElementById('report-status-msg');
+            btn.disabled = true; btn.innerText = 'Отправка...'; msg.innerText = '';
+
+            // Собираем данные
+            const reportData = {
+                authorName: currentUserData.full_name,
+                authorStatic: currentUserData.static,
+                authorRank: currentUserData.rank,
+                type: document.getElementById('report-type').value,
+                desc: document.getElementById('report-desc').value,
+                proof: document.getElementById('report-proof').value || 'Нет прикрепленных материалов'
+            };
+
+            // ЗДЕСЬ БУДЕТ ВЕБХУК. Пока просто имитируем успешную отправку задержкой в 1 секунду.
+            try {
+                // await fetch('ТУТ_БУДЕТ_ССЫЛКА_НА_ВЕБХУК', { ... }) 
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Временная заглушка
+
+                msg.innerText = 'Рапорт успешно отправлен!'; 
+                msg.style.color = '#69f0ae'; 
+                setTimeout(() => { 
+                    closeModal('report-modal'); 
+                    btn.disabled = false; btn.innerText = 'Отправить рапорт'; 
+                    document.getElementById('report-form').reset(); 
+                }, 1500);
+
+            } catch (error) {
+                msg.innerText = 'Ошибка при отправке!'; 
+                msg.style.color = '#ff5252';
+                btn.disabled = false; btn.innerText = 'Отправить рапорт';
+            }
+        };
+
+        // Создание бойца
         document.getElementById('create-user-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('create-submit-btn');
@@ -250,7 +341,6 @@
             const password = document.getElementById('new-password').value;
             const staticId = document.getElementById('new-static').value.trim();
 
-            // 1. Создаем аккаунт через вспомогательный клиент (твоя сессия не слетает!)
             const { data, error } = await supabaseCreator.auth.signUp({ email, password });
             if (error) { 
                 msg.innerText = 'Ошибка Auth: ' + error.message; msg.style.color = '#ff5252'; 
@@ -258,16 +348,13 @@
             }
 
             if (data.user) {
-                // 2. Вносим данные в таблицу (здесь теперь ловим ошибки базы данных)
                 const { error: dbError } = await supabaseClient.from('unit_roster').insert([{
                     id: data.user.id, static: staticId, full_name: document.getElementById('new-fullname').value,
                     rank: document.getElementById('new-rank').value, callsign: document.getElementById('new-callsign').value, is_active: true
                 }]);
                 
-                // Если статик дублируется или другая ошибка БД
                 if (dbError) {
-                    msg.innerText = 'Ошибка Базы: этот статик уже занят или неверный формат!'; 
-                    msg.style.color = '#ff5252'; 
+                    msg.innerText = 'Ошибка Базы: этот статик уже занят!'; msg.style.color = '#ff5252'; 
                     btn.disabled = false; btn.innerText = 'Создать'; return; 
                 }
 
@@ -280,40 +367,29 @@
             }
         };
 
-        // Загрузка таблицы бойцов
+        // Таблица и Увольнение
         async function loadRoster() {
             const tbody = document.getElementById('roster-table-body');
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Загрузка данных...</td></tr>';
-            
             const { data } = await supabaseClient.from('unit_roster').select('*').order('full_name', { ascending: true });
             
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Штат пуст</td></tr>'; return;
             }
-            
             tbody.innerHTML = data.map(s => `<tr class="fade-in">
-                <td><code>${s.static}</code></td>
-                <td><strong>${s.full_name}</strong></td>
-                <td>${s.rank}</td>
-                <td>${s.callsign || '-'}</td>
+                <td><code>${s.static}</code></td><td><strong>${s.full_name}</strong></td><td>${s.rank}</td><td>${s.callsign || '-'}</td>
                 <td><button class="btn btn-danger" style="padding: 6px 12px; font-size: 11px;" onclick="fire('${s.id}')">Уволить</button></td>
             </tr>`).join('');
         }
 
-        // ЖЕСТКОЕ УДАЛЕНИЕ БОЙЦА (Исправлено)
         window.fire = async (id) => { 
-            if(confirm('Удалить бойца из базы кадров? Он полностью потеряет доступ к порталу.')) { 
+            if(confirm('Удалить бойца из базы кадров? Он потеряет доступ.')) { 
                 const { error } = await supabaseClient.from('unit_roster').delete().eq('id', id); 
-                if (error) {
-                    alert('Ошибка при удалении: ' + error.message);
-                } else {
-                    loadRoster(); // Перезагружаем список
-                }
+                if (error) alert('Ошибка: ' + error.message); else loadRoster();
             } 
         };
         
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
-        
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
     </script>
 </body>
