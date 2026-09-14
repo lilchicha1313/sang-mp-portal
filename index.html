@@ -6,6 +6,9 @@
     <title>SANG | Военная Полиция</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* Оптимизация коробки, чтобы ничего не прыгало */
+        *, *::before, *::after { box-sizing: border-box; }
+        
         :root {
             --bg-color: #0b0c10; --card-bg: #14161f; --accent-color: #b71c1c;
             --accent-hover: #c62828; --text-main: #eceff1; --text-muted: #90a4ae; --border-color: #263238;
@@ -14,50 +17,80 @@
             margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg-color); color: var(--text-main);
             display: flex; flex-direction: column; min-height: 100vh;
+            overflow-y: scroll; /* Фиксируем скролл, чтобы сайт не прыгал влево-вправо */
         }
         header {
             background-color: var(--card-bg); border-bottom: 2px solid var(--accent-color);
             padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
         .logo { font-weight: bold; font-size: 18px; letter-spacing: 1.5px; color: #fff; text-transform: uppercase; }
         .logo span { color: var(--accent-color); }
-        nav a { color: var(--text-muted); text-decoration: none; margin-left: 20px; font-size: 14px; text-transform: uppercase; font-weight: 600; cursor: pointer; }
+        
+        nav a { color: var(--text-muted); text-decoration: none; margin-left: 20px; font-size: 14px; text-transform: uppercase; font-weight: 600; cursor: pointer; transition: color 0.2s; }
         nav a:hover, nav a.active { color: #fff; }
+        
         main { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        
         .hero-card {
             background-color: var(--card-bg); border: 1px solid var(--border-color);
             border-top: 4px solid var(--accent-color); border-radius: 6px;
             padding: 40px; max-width: 700px; width: 100%; text-align: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
+        
         h1 { margin-top: 0; color: #fff; font-size: 24px; text-transform: uppercase; }
-        .subtitle { font-size: 13px; color: var(--accent-color); font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
+        .subtitle { font-size: 13px; color: var(--accent-color); font-weight: bold; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;}
         p { color: var(--text-muted); line-height: 1.5; font-size: 14px; }
+        
         .btn {
             background-color: var(--accent-color); color: white; border: none;
             padding: 10px 25px; font-size: 14px; font-weight: bold; border-radius: 4px;
-            cursor: pointer; text-transform: uppercase;
+            cursor: pointer; text-transform: uppercase; transition: background 0.2s, transform 0.1s, opacity 0.2s;
         }
-        .btn:hover { background-color: var(--accent-hover); }
+        .btn:hover:not(:disabled) { background-color: var(--accent-hover); transform: translateY(-1px); }
+        .btn:active:not(:disabled) { transform: translateY(1px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-danger { background-color: #b71c1c; }
+        
+        /* Плавные Модальные Окна */
         .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+            display: flex;
         }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-card {
             background: var(--card-bg); border-top: 4px solid var(--accent-color);
             padding: 30px; border-radius: 6px; width: 100%; max-width: 400px; position: relative; text-align: left;
+            transform: scale(0.95) translateY(-10px); transition: transform 0.3s ease;
         }
-        .form-group { margin-bottom: 12px; }
+        .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
+        
+        .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
         .form-group input, .form-group select {
-            width: 100%; padding: 9px; background: #0b0c10; border: 1px solid var(--border-color);
-            color: #fff; border-radius: 4px; box-sizing: border-box;
+            width: 100%; padding: 10px; background: #0b0c10; border: 1px solid var(--border-color);
+            color: #fff; border-radius: 4px; font-size: 14px; transition: border-color 0.2s; outline: none;
         }
-        .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
-        .status-msg { margin-top: 15px; font-size: 13px; text-align: center; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--accent-color); }
+        .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; transition: color 0.2s; }
+        .close-btn:hover { color: #fff; }
+        .status-msg { margin-top: 15px; font-size: 13px; text-align: center; height: 18px; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; text-align: left; }
-        th, td { padding: 10px; border-bottom: 1px solid var(--border-color); }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); }
         th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; }
+        tr:hover td { background-color: rgba(255,255,255,0.02); }
+
+        /* Классы для плавной смены экранов */
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -66,21 +99,22 @@
         <div class="logo">🛡️ SANG <span>// Military Police</span></div>
         <nav>
             <a id="nav-home" class="active">Главная</a>
-            <a id="nav-roster" style="display:none;">Личный состав</a>
+            <a id="nav-roster" class="hidden">Личный состав</a>
             <a id="nav-auth-btn" style="color: var(--accent-color);">Вход</a>
         </nav>
     </header>
 
     <main>
         <!-- Приветствие -->
-        <div class="hero-card" id="hero-welcome">
+        <div class="hero-card fade-in" id="hero-welcome">
             <div class="subtitle">Отдел Военной Полиции</div>
             <h1>Защита закона и порядка</h1>
-            <button class="btn" id="open-auth-btn">Войти в систему</button>
+            <p>Официальный защищенный портал подразделения.</p><br>
+            <button class="btn" onclick="openModal('auth-modal')">Войти в систему</button>
         </div>
 
         <!-- Профиль -->
-        <div class="hero-card" id="user-profile-card" style="display:none;">
+        <div class="hero-card hidden" id="user-profile-card">
             <div class="subtitle">Личное дело офицера</div>
             <h1 id="profile-name">Загрузка...</h1>
             <p><strong>Статик:</strong> <span id="profile-static">-</span> | <strong>Звание:</strong> <span id="profile-rank">-</span> | <strong>Позывной:</strong> <span id="profile-callsign">-</span></p>
@@ -88,13 +122,13 @@
         </div>
 
         <!-- Кадры -->
-        <div class="hero-card" id="admin-roster-panel" style="display:none; max-width: 900px; text-align: left;">
+        <div class="hero-card hidden" id="admin-roster-panel" style="max-width: 900px; text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div><div class="subtitle">Управление кадрами</div><h1>Личный состав MP</h1></div>
-                <button class="btn" id="open-create-user-modal">+ Добавить бойца</button>
+                <div><div class="subtitle">Управление кадрами</div><h1 style="margin-bottom:0;">Личный состав MP</h1></div>
+                <button class="btn" onclick="openModal('create-user-modal')">+ Добавить бойца</button>
             </div>
             <table>
-                <thead><tr><th>Статик</th><th>Имя</th><th>Звание</th><th>Позывной</th><th>Действие</th></tr></thead>
+                <thead><tr><th>Статик</th><th>Имя (IC)</th><th>Звание</th><th>Позывной</th><th>Действие</th></tr></thead>
                 <tbody id="roster-table-body"></tbody>
             </table>
         </div>
@@ -103,12 +137,12 @@
     <!-- Модалка входа -->
     <div class="modal-overlay" id="auth-modal">
         <div class="modal-card">
-            <button class="close-btn" id="close-modal-btn">&times;</button>
+            <button class="close-btn" onclick="closeModal('auth-modal')">&times;</button>
             <h2>Вход в систему</h2>
             <form id="auth-form">
                 <div class="form-group"><label>Логин (Email)</label><input type="text" id="login-static" placeholder="41042@sang.local" required></div>
                 <div class="form-group"><label>Пароль</label><input type="password" id="login-password" required></div>
-                <button type="submit" class="btn" style="width: 100%;">Войти</button>
+                <button type="submit" class="btn" id="login-submit-btn" style="width: 100%;">Войти</button>
             </form>
             <div class="status-msg" id="status-msg"></div>
         </div>
@@ -117,16 +151,16 @@
     <!-- Модалка создания юзера -->
     <div class="modal-overlay" id="create-user-modal">
         <div class="modal-card">
-            <button class="close-btn" id="close-create-modal">&times;</button>
+            <button class="close-btn" onclick="closeModal('create-user-modal')">&times;</button>
             <h2>Добавить бойца</h2>
             <form id="create-user-form">
                 <div class="form-group"><label>Email (например: 12345@sang.local)</label><input type="text" id="new-email" required></div>
-                <div class="form-group"><label>Пароль</label><input type="text" id="new-password" required></div>
+                <div class="form-group"><label>Пароль (МИНИМУМ 6 СИМВОЛОВ)</label><input type="text" id="new-password" required minlength="6"></div>
                 <div class="form-group"><label>Статический ID</label><input type="text" id="new-static" required></div>
                 <div class="form-group"><label>Имя (IC)</label><input type="text" id="new-fullname" required></div>
                 <div class="form-group"><label>Звание</label><select id="new-rank"><option>Рекрут MP</option><option>Офицер MP</option><option>Начальник MP</option></select></div>
                 <div class="form-group"><label>Позывной</label><input type="text" id="new-callsign"></div>
-                <button type="submit" class="btn" style="width: 100%;">Создать</button>
+                <button type="submit" class="btn" id="create-submit-btn" style="width: 100%;">Создать</button>
             </form>
             <div class="status-msg" id="create-status-msg"></div>
         </div>
@@ -141,40 +175,47 @@
         
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const authModal = document.getElementById('auth-modal');
-        const createUserModal = document.getElementById('create-user-modal');
-        
-        document.getElementById('open-auth-btn').onclick = () => authModal.style.display = 'flex';
-        document.getElementById('nav-auth-btn').onclick = () => authModal.style.display = 'flex';
-        document.getElementById('close-modal-btn').onclick = () => authModal.style.display = 'none';
-        
-        document.getElementById('open-create-user-modal').onclick = () => createUserModal.style.display = 'flex';
-        document.getElementById('close-create-modal').onclick = () => createUserModal.style.display = 'none';
+        // Функция плавного переключения панелей (чтобы не моргало)
+        function switchPanel(panelId) {
+            ['hero-welcome', 'user-profile-card', 'admin-roster-panel'].forEach(id => {
+                const el = document.getElementById(id);
+                el.classList.add('hidden');
+                el.classList.remove('fade-in');
+            });
+            const target = document.getElementById(panelId);
+            target.classList.remove('hidden');
+            setTimeout(() => target.classList.add('fade-in'), 10);
+        }
 
+        // Функции модалок
+        window.openModal = (id) => document.getElementById(id).classList.add('active');
+        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+
+        // Навигация
+        document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => {
-            document.getElementById('admin-roster-panel').style.display = 'none';
-            document.getElementById('hero-welcome').style.display = document.getElementById('user-profile-card').style.display === 'block' ? 'none' : 'block';
+            const isProfileLoaded = document.getElementById('profile-name').innerText !== 'Загрузка...';
+            switchPanel(isProfileLoaded ? 'user-profile-card' : 'hero-welcome');
         };
 
         // Вход
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
-            const emailInput = document.getElementById('login-static').value.trim();
-            const password = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-submit-btn');
             const msg = document.getElementById('status-msg');
-            msg.innerText = 'Загрузка...';
+            btn.disabled = true; btn.innerText = 'Проверка...'; msg.innerText = ''; // Блокируем кнопку во избежание лагов
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: emailInput, password: password
+                email: document.getElementById('login-static').value.trim(), 
+                password: document.getElementById('login-password').value
             });
 
             if (error) { 
-                msg.innerText = 'Ошибка: ' + error.message; 
-                msg.style.color = 'red'; 
+                msg.innerText = 'Ошибка: ' + error.message; msg.style.color = '#ff5252'; 
+                btn.disabled = false; btn.innerText = 'Войти';
             } else { 
-                msg.innerText = 'Успешно!'; 
-                msg.style.color = 'green'; 
-                setTimeout(() => { authModal.style.display = 'none'; loadProfile(data.user); }, 500); 
+                msg.innerText = 'Успешно!'; msg.style.color = '#69f0ae'; 
+                setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 600); 
             }
         };
 
@@ -182,21 +223,19 @@
         async function loadProfile(user) {
             const { data } = await supabaseClient.from('unit_roster').select('*').eq('id', user.id).single();
             if (data && data.is_active) {
-                document.getElementById('hero-welcome').style.display = 'none';
-                document.getElementById('user-profile-card').style.display = 'block';
+                switchPanel('user-profile-card');
                 document.getElementById('profile-name').innerText = data.full_name;
                 document.getElementById('profile-static').innerText = data.static;
                 document.getElementById('profile-rank').innerText = data.rank;
                 document.getElementById('profile-callsign').innerText = data.callsign || '-';
-                document.getElementById('nav-auth-btn').innerText = 'Кабинет';
+                
+                const authBtn = document.getElementById('nav-auth-btn');
+                authBtn.innerText = 'Кабинет'; authBtn.onclick = () => switchPanel('user-profile-card');
 
-                if (data.rank.includes('Начальник')) {
-                    document.getElementById('nav-roster').style.display = 'inline';
-                    document.getElementById('nav-roster').onclick = () => {
-                        document.getElementById('user-profile-card').style.display = 'none';
-                        document.getElementById('admin-roster-panel').style.display = 'block';
-                        loadRoster();
-                    };
+                if (data.rank.includes('Начальник') || data.rank.includes('Зам')) {
+                    const navRoster = document.getElementById('nav-roster');
+                    navRoster.classList.remove('hidden');
+                    navRoster.onclick = () => { switchPanel('admin-roster-panel'); loadRoster(); };
                 }
             }
         }
@@ -204,35 +243,63 @@
         // Создание бойца
         document.getElementById('create-user-form').onsubmit = async (e) => {
             e.preventDefault();
+            const btn = document.getElementById('create-submit-btn');
+            const msg = document.getElementById('create-status-msg');
+            btn.disabled = true; btn.innerText = 'Оформление...'; msg.innerText = '';
+
             const email = document.getElementById('new-email').value.trim();
             const password = document.getElementById('new-password').value;
             const staticId = document.getElementById('new-static').value.trim();
-            const msg = document.getElementById('create-status-msg');
-            msg.innerText = 'Создание...';
 
             const { data, error } = await supabaseClient.auth.signUp({ email, password });
-            if (error) { msg.innerText = 'Ошибка: ' + error.message; msg.style.color = 'red'; return; }
+            if (error) { 
+                msg.innerText = 'Ошибка: ' + error.message; msg.style.color = '#ff5252'; 
+                btn.disabled = false; btn.innerText = 'Создать'; return; 
+            }
 
             if (data.user) {
                 await supabaseClient.from('unit_roster').insert([{
                     id: data.user.id, static: staticId, full_name: document.getElementById('new-fullname').value,
                     rank: document.getElementById('new-rank').value, callsign: document.getElementById('new-callsign').value, is_active: true
                 }]);
-                msg.innerText = 'Готово!'; msg.style.color = 'green'; setTimeout(() => { createUserModal.style.display = 'none'; loadRoster(); }, 1000);
+                msg.innerText = 'Боец добавлен!'; msg.style.color = '#69f0ae'; 
+                setTimeout(() => { 
+                    closeModal('create-user-modal'); loadRoster(); 
+                    btn.disabled = false; btn.innerText = 'Создать'; 
+                    document.getElementById('create-user-form').reset(); // очищаем форму
+                }, 1000);
             }
         };
 
         // Список бойцов
         async function loadRoster() {
             const tbody = document.getElementById('roster-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Загрузка данных...</td></tr>';
+            
             const { data } = await supabaseClient.from('unit_roster').select('*').eq('is_active', true);
-            tbody.innerHTML = data.map(s => `<tr><td>${s.static}</td><td>${s.full_name}</td><td>${s.rank}</td><td>${s.callsign || '-'}</td>
-                <td><button class="btn btn-danger" onclick="fire('${s.id}')">Уволить</button></td></tr>`).join('');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Штат пуст</td></tr>'; return;
+            }
+            
+            tbody.innerHTML = data.map(s => `<tr class="fade-in">
+                <td><code>${s.static}</code></td>
+                <td><strong>${s.full_name}</strong></td>
+                <td>${s.rank}</td>
+                <td>${s.callsign || '-'}</td>
+                <td><button class="btn btn-danger" style="padding: 6px 12px; font-size: 11px;" onclick="fire('${s.id}')">Уволить</button></td>
+            </tr>`).join('');
         }
 
-        window.fire = async (id) => { if(confirm('Уволить?')) { await supabaseClient.from('unit_roster').update({is_active: false}).eq('id', id); loadRoster(); } };
+        window.fire = async (id) => { 
+            if(confirm('Вы уверены, что хотите уволить сотрудника? Он потеряет доступ к порталу.')) { 
+                await supabaseClient.from('unit_roster').update({is_active: false}).eq('id', id); 
+                loadRoster(); 
+            } 
+        };
         
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
+        
+        // Авто-логин при загрузке страницы (плавный)
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
     </script>
 </body>
