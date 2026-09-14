@@ -6,7 +6,6 @@
     <title>SANG | Военная Полиция</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Оптимизация коробки, чтобы ничего не прыгало */
         *, *::before, *::after { box-sizing: border-box; }
         
         :root {
@@ -17,7 +16,7 @@
             margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg-color); color: var(--text-main);
             display: flex; flex-direction: column; min-height: 100vh;
-            overflow-y: scroll; /* Фиксируем скролл, чтобы сайт не прыгал влево-вправо */
+            overflow-y: scroll;
         }
         header {
             background-color: var(--card-bg); border-bottom: 2px solid var(--accent-color);
@@ -53,7 +52,6 @@
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-danger { background-color: #b71c1c; }
         
-        /* Плавные Модальные Окна */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; z-index: 1000;
@@ -84,7 +82,6 @@
         th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; }
         tr:hover td { background-color: rgba(255,255,255,0.02); }
 
-        /* Классы для плавной смены экранов */
         .hidden { display: none !important; }
         .fade-in { animation: fadeIn 0.4s ease forwards; }
         @keyframes fadeIn {
@@ -105,7 +102,6 @@
     </header>
 
     <main>
-        <!-- Приветствие -->
         <div class="hero-card fade-in" id="hero-welcome">
             <div class="subtitle">Отдел Военной Полиции</div>
             <h1>Защита закона и порядка</h1>
@@ -113,7 +109,6 @@
             <button class="btn" onclick="openModal('auth-modal')">Войти в систему</button>
         </div>
 
-        <!-- Профиль -->
         <div class="hero-card hidden" id="user-profile-card">
             <div class="subtitle">Личное дело офицера</div>
             <h1 id="profile-name">Загрузка...</h1>
@@ -121,7 +116,6 @@
             <br><button class="btn" id="logout-btn" style="background-color: #37474f;">Выйти</button>
         </div>
 
-        <!-- Кадры -->
         <div class="hero-card hidden" id="admin-roster-panel" style="max-width: 900px; text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div><div class="subtitle">Управление кадрами</div><h1 style="margin-bottom:0;">Личный состав MP</h1></div>
@@ -168,14 +162,18 @@
 
     <script>
         // =========================================================
-        // ВСТАВЬ СЮДА СВОИ КЛЮЧИ ИЗ SUPABASE (Project Settings -> API):
+        // ВСТАВЬ СЮДА СВОИ КЛЮЧИ ИЗ SUPABASE:
         // =========================================================
         const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
         
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Функция плавного переключения панелей (чтобы не моргало)
+        // ВТОРОЙ КЛИЕНТ ТОЛЬКО ДЛЯ СОЗДАНИЯ ЮЗЕРОВ (чтобы не выбивало сессию Начальника)
+        const supabaseCreator = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { storageKey: 'temp-creator-key', persistSession: false }
+        });
+
         function switchPanel(panelId) {
             ['hero-welcome', 'user-profile-card', 'admin-roster-panel'].forEach(id => {
                 const el = document.getElementById(id);
@@ -187,23 +185,24 @@
             setTimeout(() => target.classList.add('fade-in'), 10);
         }
 
-        // Функции модалок
         window.openModal = (id) => document.getElementById(id).classList.add('active');
-        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+        window.closeModal = (id) => {
+            document.getElementById(id).classList.remove('active');
+            document.getElementById('create-status-msg').innerText = ''; // Очистка статуса при закрытии
+        }
 
-        // Навигация
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => {
             const isProfileLoaded = document.getElementById('profile-name').innerText !== 'Загрузка...';
             switchPanel(isProfileLoaded ? 'user-profile-card' : 'hero-welcome');
         };
 
-        // Вход
+        // Логика Входа
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-submit-btn');
             const msg = document.getElementById('status-msg');
-            btn.disabled = true; btn.innerText = 'Проверка...'; msg.innerText = ''; // Блокируем кнопку во избежание лагов
+            btn.disabled = true; btn.innerText = 'Проверка...'; msg.innerText = '';
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: document.getElementById('login-static').value.trim(), 
@@ -219,10 +218,10 @@
             }
         };
 
-        // Загрузка профиля
+        // Загрузка данных профиля
         async function loadProfile(user) {
             const { data } = await supabaseClient.from('unit_roster').select('*').eq('id', user.id).single();
-            if (data && data.is_active) {
+            if (data) {
                 switchPanel('user-profile-card');
                 document.getElementById('profile-name').innerText = data.full_name;
                 document.getElementById('profile-static').innerText = data.static;
@@ -240,7 +239,7 @@
             }
         }
 
-        // Создание бойца
+        // Логика добавления бойца (С ИСПРАВЛЕННЫМИ БАГАМИ)
         document.getElementById('create-user-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('create-submit-btn');
@@ -251,32 +250,43 @@
             const password = document.getElementById('new-password').value;
             const staticId = document.getElementById('new-static').value.trim();
 
-            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            // 1. Создаем аккаунт через вспомогательный клиент (твоя сессия не слетает!)
+            const { data, error } = await supabaseCreator.auth.signUp({ email, password });
             if (error) { 
-                msg.innerText = 'Ошибка: ' + error.message; msg.style.color = '#ff5252'; 
+                msg.innerText = 'Ошибка Auth: ' + error.message; msg.style.color = '#ff5252'; 
                 btn.disabled = false; btn.innerText = 'Создать'; return; 
             }
 
             if (data.user) {
-                await supabaseClient.from('unit_roster').insert([{
+                // 2. Вносим данные в таблицу (здесь теперь ловим ошибки базы данных)
+                const { error: dbError } = await supabaseClient.from('unit_roster').insert([{
                     id: data.user.id, static: staticId, full_name: document.getElementById('new-fullname').value,
                     rank: document.getElementById('new-rank').value, callsign: document.getElementById('new-callsign').value, is_active: true
                 }]);
+                
+                // Если статик дублируется или другая ошибка БД
+                if (dbError) {
+                    msg.innerText = 'Ошибка Базы: этот статик уже занят или неверный формат!'; 
+                    msg.style.color = '#ff5252'; 
+                    btn.disabled = false; btn.innerText = 'Создать'; return; 
+                }
+
                 msg.innerText = 'Боец добавлен!'; msg.style.color = '#69f0ae'; 
                 setTimeout(() => { 
                     closeModal('create-user-modal'); loadRoster(); 
                     btn.disabled = false; btn.innerText = 'Создать'; 
-                    document.getElementById('create-user-form').reset(); // очищаем форму
+                    document.getElementById('create-user-form').reset(); 
                 }, 1000);
             }
         };
 
-        // Список бойцов
+        // Загрузка таблицы бойцов
         async function loadRoster() {
             const tbody = document.getElementById('roster-table-body');
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Загрузка данных...</td></tr>';
             
-            const { data } = await supabaseClient.from('unit_roster').select('*').eq('is_active', true);
+            const { data } = await supabaseClient.from('unit_roster').select('*').order('full_name', { ascending: true });
+            
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Штат пуст</td></tr>'; return;
             }
@@ -290,16 +300,20 @@
             </tr>`).join('');
         }
 
+        // ЖЕСТКОЕ УДАЛЕНИЕ БОЙЦА (Исправлено)
         window.fire = async (id) => { 
-            if(confirm('Вы уверены, что хотите уволить сотрудника? Он потеряет доступ к порталу.')) { 
-                await supabaseClient.from('unit_roster').update({is_active: false}).eq('id', id); 
-                loadRoster(); 
+            if(confirm('Удалить бойца из базы кадров? Он полностью потеряет доступ к порталу.')) { 
+                const { error } = await supabaseClient.from('unit_roster').delete().eq('id', id); 
+                if (error) {
+                    alert('Ошибка при удалении: ' + error.message);
+                } else {
+                    loadRoster(); // Перезагружаем список
+                }
             } 
         };
         
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
         
-        // Авто-логин при загрузке страницы (плавный)
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
     </script>
 </body>
