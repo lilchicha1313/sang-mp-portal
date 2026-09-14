@@ -11,12 +11,12 @@
         :root {
             --bg-color: #0b0c10; --card-bg: #14161f; --accent-color: #b71c1c;
             --accent-hover: #c62828; --text-main: #eceff1; --text-muted: #90a4ae; --border-color: #263238;
+            --success-color: #2e7d32; --danger-color: #c62828;
         }
         body {
             margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg-color); color: var(--text-main);
-            display: flex; flex-direction: column; min-height: 100vh;
-            overflow-y: scroll;
+            display: flex; flex-direction: column; min-height: 100vh; overflow-y: scroll;
         }
         header {
             background-color: var(--card-bg); border-bottom: 2px solid var(--accent-color);
@@ -34,7 +34,7 @@
         .hero-card {
             background-color: var(--card-bg); border: 1px solid var(--border-color);
             border-top: 4px solid var(--accent-color); border-radius: 6px;
-            padding: 40px; max-width: 900px; width: 100%; text-align: center;
+            padding: 40px; max-width: 950px; width: 100%; text-align: center;
             box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
         
@@ -50,7 +50,8 @@
         .btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
         .btn:active:not(:disabled) { transform: translateY(1px); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-danger { background-color: #b71c1c; }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-success { background-color: var(--success-color); }
         .btn-blue { background-color: #1976d2; }
         
         .modal-overlay {
@@ -62,8 +63,9 @@
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-card {
             background: var(--card-bg); border-top: 4px solid var(--accent-color);
-            padding: 30px; border-radius: 6px; width: 100%; max-width: 500px; position: relative; text-align: left;
+            padding: 30px; border-radius: 6px; width: 100%; max-width: 550px; position: relative; text-align: left;
             transform: scale(0.95) translateY(-10px); transition: transform 0.3s ease;
+            max-height: 90vh; overflow-y: auto;
         }
         .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
         
@@ -77,12 +79,16 @@
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent-color); }
         .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; transition: color 0.2s; }
         .close-btn:hover { color: #fff; }
-        .status-msg { margin-top: 15px; font-size: 13px; text-align: center; height: 18px; }
+        .status-msg { margin-top: 15px; font-size: 13px; text-align: center; min-height: 18px; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; text-align: left; }
-        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; }
         tr:hover td { background-color: rgba(255,255,255,0.02); }
+
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block; }
+        .badge-pending { background: #f57f17; color: #fff; }
+        .badge-approved { background: #2e7d32; color: #fff; }
 
         .hidden { display: none !important; }
         .fade-in { animation: fadeIn 0.4s ease forwards; }
@@ -100,24 +106,24 @@
             <a id="nav-home" class="active">Главная</a>
             <a id="nav-reports" class="hidden">Реестр рапортов</a>
             <a id="nav-roster" class="hidden">Личный состав</a>
-            <a id="nav-auth-btn" style="color: var(--accent-color);">Вход</a>
+            <a id="nav-auth-btn" style="color: var(--accent-color);">Вход для MP</a>
         </nav>
     </header>
 
     <main>
-        <!-- Неавторизованный экран -->
+        <!-- ПУБЛИЧНЫЙ ЭКРАН (ВИДЕН ВСЕМ) -->
         <div class="hero-card fade-in" id="hero-welcome">
             <div class="subtitle">Отдел Военной Полиции</div>
-            <h1>Защита закона и порядка</h1>
-            <p>Официальный защищенный портал подразделения.</p><br>
-            <button class="btn" onclick="openModal('auth-modal')">Войти в систему</button>
+            <h1>Подача рапорта о нарушении</h1>
+            <p>Портал приема обращений и рапортов о правонарушениях военнослужащих SANG.</p><br>
+            <button class="btn btn-blue" style="font-size: 15px; padding: 12px 25px;" onclick="openModal('report-modal')">📄 Подать рапорт</button>
         </div>
 
-        <!-- ГЛАВНАЯ ПАНЕЛЬ ПОСЛЕ ВХОДА -->
+        <!-- ЛИЧНЫЙ КАБИНЕТ ОФИЦЕРА MP -->
         <div class="hero-card hidden" id="dashboard-panel" style="text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                    <div class="subtitle">Панель управления</div>
+                    <div class="subtitle">Кабинет офицера MP</div>
                     <h1 id="profile-name">Загрузка...</h1>
                     <p style="margin-top: 5px;">
                         <strong>Статик:</strong> <span id="profile-static">-</span> | 
@@ -130,18 +136,18 @@
             
             <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
             
-            <h3 style="margin-top: 0; color: var(--text-muted); font-size: 14px; text-transform: uppercase;">Быстрые действия</h3>
+            <h3 style="margin-top: 0; color: var(--text-muted); font-size: 14px; text-transform: uppercase;">Панель управления</h3>
             <div style="display: flex; gap: 15px;">
-                <button class="btn btn-blue" onclick="openModal('report-modal')">📄 Подать рапорт на нарушение</button>
+                <button class="btn btn-blue" onclick="switchPanel('reports-panel'); loadReports();">Перейти к модерации рапортов</button>
             </div>
         </div>
 
-        <!-- РЕЕСТР РАПОРТОВ -->
+        <!-- РЕЕСТР РАПОРТОВ (ТОЛЬКО ДЛЯ АВТОРИЗОВАННЫХ) -->
         <div class="hero-card hidden" id="reports-panel" style="text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div class="subtitle">База данных MP</div>
-                    <h1 id="reports-title">Реестр рапортов</h1>
+                    <h1>Модерация рапортов</h1>
                 </div>
                 <button class="btn btn-blue" onclick="openModal('report-modal')">+ Подать рапорт</button>
             </div>
@@ -149,18 +155,18 @@
                 <thead>
                     <tr>
                         <th>Номенклатура / Дата</th>
-                        <th>Автор</th>
+                        <th>Заявитель</th>
                         <th>Нарушитель</th>
-                        <th>Причина</th>
-                        <th>Материалы</th>
-                        <th id="th-actions">Действия</th>
+                        <th>Суть нарушения</th>
+                        <th>Статус</th>
+                        <th>Действия / Проверил</th>
                     </tr>
                 </thead>
                 <tbody id="reports-table-body"></tbody>
             </table>
         </div>
 
-        <!-- АДМИНКА (КАДРЫ) -->
+        <!-- АДМИНКА (КАДРЫ MP) -->
         <div class="hero-card hidden" id="admin-roster-panel" style="text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div><div class="subtitle">Управление кадрами</div><h1 style="margin-bottom:0;">Личный состав MP</h1></div>
@@ -173,11 +179,11 @@
         </div>
     </main>
 
-    <!-- Модалка входа -->
+    <!-- Модалка входа для сотрудников -->
     <div class="modal-overlay" id="auth-modal">
         <div class="modal-card">
             <button class="close-btn" onclick="closeModal('auth-modal')">&times;</button>
-            <h2>Вход в систему</h2>
+            <h2>Вход для сотрудников MP</h2>
             <form id="auth-form">
                 <div class="form-group"><label>Логин (Email)</label><input type="text" id="login-static" placeholder="41042@sang.local" required></div>
                 <div class="form-group"><label>Пароль</label><input type="password" id="login-password" required></div>
@@ -187,17 +193,17 @@
         </div>
     </div>
 
-    <!-- Модалка создания юзера -->
+    <!-- Модалка добавления офицера -->
     <div class="modal-overlay" id="create-user-modal">
         <div class="modal-card">
             <button class="close-btn" onclick="closeModal('create-user-modal')">&times;</button>
-            <h2>Добавить бойца</h2>
+            <h2>Добавить сотрудника MP</h2>
             <form id="create-user-form">
                 <div class="form-group"><label>Email</label><input type="text" id="new-email" required></div>
                 <div class="form-group"><label>Пароль (мин. 6 символов)</label><input type="text" id="new-password" required minlength="6"></div>
                 <div class="form-group"><label>Статический ID</label><input type="text" id="new-static" required></div>
                 <div class="form-group"><label>Имя (IC)</label><input type="text" id="new-fullname" required></div>
-                <div class="form-group"><label>Звание</label><select id="new-rank"><option>Рекрут MP</option><option>Офицер MP</option><option>Начальник MP</option></select></div>
+                <div class="form-group"><label>Звание</label><select id="new-rank"><option>Рекрут MP</option><option>Офицер MP</option><option>Зам. Начальника MP</option><option>Начальник MP</option></select></div>
                 <div class="form-group"><label>Позывной</label><input type="text" id="new-callsign"></div>
                 <button type="submit" class="btn" id="create-submit-btn" style="width: 100%;">Создать</button>
             </form>
@@ -205,18 +211,33 @@
         </div>
     </div>
 
-    <!-- Модалка подачи рапорта -->
+    <!-- МОДАЛКА ПУБЛИЧНОЙ ПОДАЧИ РАПОРТА -->
     <div class="modal-overlay" id="report-modal">
         <div class="modal-card" style="border-top-color: #1976d2;">
             <button class="close-btn" onclick="closeModal('report-modal')">&times;</button>
-            <h2>Подача рапорта</h2>
+            <h2>Подача рапорта о нарушении</h2>
             <form id="report-form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>Ваше Имя Фамилия (IC)</label>
+                        <input type="text" id="author-name" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ваш статический ID</label>
+                        <input type="text" id="author-static" placeholder="12345" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Ваш Discord ID (для тега/уведомлений)</label>
+                    <input type="text" id="author-discord-id" placeholder="Например: 358231200192330000" required>
+                    <small style="color: var(--text-muted); font-size: 10px;">Включите режим разработчика в Discord -> ПКМ по себе -> Скопировать ID</small>
+                </div>
                 <div class="form-group">
                     <label>Статик нарушителя</label>
                     <input type="text" id="violator-static" placeholder="Например: 55102" required>
                 </div>
                 <div class="form-group">
-                    <label>Суть нарушения (Категория)</label>
+                    <label>Суть нарушения</label>
                     <select id="report-type">
                         <option value="1.1_ustav">Нарушение субординации (1.1 Устав)</option>
                         <option value="awol">Самовольное оставление части (AWOL)</option>
@@ -226,7 +247,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Подробное описание ситуации</label>
+                    <label>Подробное описание ситуаций</label>
                     <textarea id="report-desc" placeholder="Опишите детально, что произошло..." required></textarea>
                 </div>
                 <div class="form-group">
@@ -241,19 +262,17 @@
 
     <script>
         // =========================================================
-        // НАСТРОЙКИ (ВСТАВЬ СВОИ ДАННЫЕ ВЕБХУКОВ И SUPABASE)
+        // НАСТРОЙКИ SUPABASE И ВЕБХУКОВ DISCORD
         // =========================================================
         const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
         
         const CONFIG = {
-            POST_URL: "https://discord.com/api/webhooks/1154785067957244074/O47_TrBPKD02RB97Os8C9DBxme2fuJkayCSX5xk9a4kO09vaUie9-L_s1lusqdc_d1Ia", 
-            DELETE_WEBHOOK_URL: "https://discord.com/api/webhooks/1287120154903187456/1RvnWUlgzrUPm7Gsq-LmTSPPz4fNnbj_-wTyC7SGJQvs7RE8YsWLMjulbg1mkVJqIrvq", 
+            POST_URL: "https://discord.com/api/webhooks/1154785067957244074/O47_TrBPKD02RB97Os8C9DBxme2fuJkayCSX5xk9a4kO09vaUie9-L_s1lusqdc_d1Ia", // Канал куда приходят НОВЫЕ рапорты
+            DECISION_WEBHOOK_URL: "https://discord.com/api/webhooks/1287120154903187456/1RvnWUlgzrUPm7Gsq-LmTSPPz4fNnbj_-wTyC7SGJQvs7RE8YsWLMjulbg1mkVJqIrvq", // Канал логов решений (одобрения/отклонения)
             USERNAME: "San Andreas National Guard", 
             AVATAR_URL: "https://cdn.discordapp.com/attachments/1154716269837303818/1548301468032041000/SANG.png",
-            COLOR: 16711680,
             PING_ROLE_ID: "941408248894992414",
-            VIOLATOR_DAYS_LIMIT: 90,
             NOMENCLATURE_MAP: {
                 "1.1_ustav": "Нарушение субординации (1.1 Устав)",
                 "awol": "Самовольное оставление части (AWOL)",
@@ -290,9 +309,8 @@
         document.getElementById('nav-home').onclick = () => {
             switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
         };
-        document.getElementById('nav-reports').onclick = () => { switchPanel('reports-panel'); loadReports(); };
 
-        // Авторизация
+        // Вход сотрудника MP
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-submit-btn');
@@ -329,6 +347,7 @@
                 authBtn.innerText = 'Кабинет'; authBtn.onclick = () => switchPanel('dashboard-panel');
 
                 document.getElementById('nav-reports').classList.remove('hidden');
+                document.getElementById('nav-reports').onclick = () => { switchPanel('reports-panel'); loadReports(); };
 
                 const isBoss = data.rank.includes('Начальник') || data.rank.includes('Зам');
                 if (isBoss) {
@@ -340,14 +359,17 @@
         }
 
         // =========================================================
-        // ЛОГИКА ПОДАЧИ РАПОРТА С АВТО-НОМЕНКЛАТУРОЙ И ИСТОРИЕЙ
+        // ПУБЛИЧНАЯ ПОДАЧА РАПОРТА (ДОСТУПНА ВСЕМ)
         // =========================================================
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn');
             const msg = document.getElementById('report-status-msg');
-            btn.disabled = true; btn.innerText = 'Генерация...'; msg.innerText = '';
+            btn.disabled = true; btn.innerText = 'Отправка...'; msg.innerText = '';
 
+            const authorName = document.getElementById('author-name').value.trim();
+            const authorStatic = document.getElementById('author-static').value.trim();
+            const authorDiscordId = document.getElementById('author-discord-id').value.trim();
             const violatorStatic = document.getElementById('violator-static').value.trim();
             const rawType = document.getElementById('report-type').value;
             const niceReason = CONFIG.NOMENCLATURE_MAP[rawType] || rawType;
@@ -355,95 +377,55 @@
             const proof = document.getElementById('report-proof').value.trim();
 
             try {
-                // 1. Считаем личный счетчик рапортов автора для номенклатуры
-                const { count: authorReportCount } = await supabaseClient
-                    .from('reports')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('author_static', currentUserData.static);
+                // Генерация уникальной номенклатуры
+                const randomNum = Math.floor(1000 + Math.random() * 9000);
+                const nomenclature = `SANG-MP/REPORT-${authorStatic}/${randomNum}`;
 
-                const nextNumber = (authorReportCount || 0) + 1;
-                const nomenclature = `SANG-MP/REPORT-MS-${currentUserData.static}/${nextNumber}`;
-
-                // 2. Ищем прошлые нарушения нарушителя за последние 90 дней
-                const cutoffDate = new Date();
-                cutoffDate.setDate(cutoffDate.getDate() - CONFIG.VIOLATOR_DAYS_LIMIT);
-
-                const { data: pastViolations } = await supabaseClient
-                    .from('reports')
-                    .select('*')
-                    .eq('violator_static', violatorStatic)
-                    .gte('created_at', cutoffDate.toISOString())
-                    .order('created_at', { ascending: false });
-
-                const pastCount = pastViolations ? pastViolations.length : 0;
-                const totalViolations = pastCount + 1;
-
-                // 3. Сохраняем рапорт в Supabase
+                // 1. Сохраняем рапорт в Supabase со статусом pending
                 const { error: dbError } = await supabaseClient.from('reports').insert([{
-                    author_id: currentUserData.id,
-                    author_static: currentUserData.static,
-                    author_name: currentUserData.full_name,
-                    author_rank: currentUserData.rank,
+                    author_name: authorName,
+                    author_static: authorStatic,
+                    author_discord_id: authorDiscordId,
                     violator_static: violatorStatic,
                     report_type: niceReason,
                     details: desc,
                     evidence: proof,
-                    nomenclature: nomenclature
+                    nomenclature: nomenclature,
+                    status: 'pending'
                 }]);
 
                 if (dbError) throw dbError;
 
-                // 4. Формируем сообщение для Discord
-                let historyText = "";
-                if (pastCount > 0) {
-                    historyText = pastViolations.slice(0, 5).map(v => {
-                        const dateStr = new Date(v.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-                        return `▪ **${dateStr}** | \`${v.nomenclature}\` | ${v.report_type}`;
-                    }).join('\n');
-                }
-
-                const embedFields = [
-                    { name: "Имя сотрудника оформившего рапорт", value: `${currentUserData.full_name} (Статик: ${currentUserData.static})`, inline: false },
-                    { name: "Номер удостоверения нарушителя (статик)", value: violatorStatic, inline: false },
-                    { name: "Суть нарушения", value: niceReason, inline: false },
-                    { name: "Подробное описание", value: desc, inline: false },
-                    { name: "Доказательства", value: proof, inline: false }
-                ];
-
-                if (historyText) {
-                    embedFields.push({
-                        name: `📜 Прошлые нарушения за ${CONFIG.VIOLATOR_DAYS_LIMIT} дн.`,
-                        value: historyText,
-                        inline: false
-                    });
-                }
-
-                let pingContent = `🔔 **Поступил новый рапорт!** <@&${CONFIG.PING_ROLE_ID}>`;
-
-                // 5. Отправляем в Discord через Fetch
+                // 2. Отправляем уведомление в основной Discord канал (тегаем автора и роль MP)
                 await fetch(CONFIG.POST_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         username: CONFIG.USERNAME,
                         avatar_url: CONFIG.AVATAR_URL,
-                        content: pingContent,
+                        content: `🔔 **Поступил новый рапорт на проверку!** <@&${CONFIG.PING_ROLE_ID}>\nЗаявитель: <@${authorDiscordId}>`,
                         embeds: [{
-                            title: `📝 Рапорт: ${nomenclature} | ⚠️ Нарушений (за ${CONFIG.VIOLATOR_DAYS_LIMIT} дн.): ${totalViolations}`,
-                            color: CONFIG.COLOR,
-                            fields: embedFields,
-                            footer: { text: "Система автоматической обработки рапортов MP" },
+                            title: `📝 Рапорт: ${nomenclature}`,
+                            color: 16761035, // Желтый цвет (Ожидает)
+                            fields: [
+                                { name: "Заявитель", value: `${authorName} (Статик: ${authorStatic}) | <@${authorDiscordId}>`, inline: false },
+                                { name: "Статик нарушителя", value: violatorStatic, inline: true },
+                                { name: "Причина", value: niceReason, inline: true },
+                                { name: "Описание", value: desc, inline: false },
+                                { name: "Доказательства", value: proof, inline: false }
+                            ],
+                            footer: { text: "Статус: На рассмотрении Военной Полицией" },
                             timestamp: new Date().toISOString()
                         }]
                     })
                 });
 
-                msg.innerText = 'Рапорт успешно зарегистрирован!'; msg.style.color = '#69f0ae'; 
+                msg.innerText = 'Рапорт успешно отправлен на рассмотрение!'; msg.style.color = '#69f0ae'; 
                 setTimeout(() => { 
                     closeModal('report-modal'); 
                     btn.disabled = false; btn.innerText = 'Отправить рапорт'; 
                     document.getElementById('report-form').reset(); 
-                    if (!document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
+                    if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
                 }, 1200);
 
             } catch (err) {
@@ -453,70 +435,124 @@
         };
 
         // =========================================================
-        // ЗАГРУЗКА И ФИЛЬТРАЦИЯ РАПОРТОВ ПО РОЛЯМ
+        // МОДЕРАЦИЯ РАПОРТОВ (ОДОБРЕНИЕ / ОТКЛОНЕНИЕ)
         // =========================================================
         async function loadReports() {
             const tbody = document.getElementById('reports-table-body');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Загрузка рапортов...</td></tr>';
 
-            const isBoss = currentUserData.rank.includes('Начальник') || currentUserData.rank.includes('Зам');
-            
-            document.getElementById('reports-title').innerText = isBoss ? "Все рапорты подразделения" : "Мои поданные рапорты";
-
-            let query = supabaseClient.from('reports').select('*').order('created_at', { ascending: false });
-
-            // Обычный офицер видит только свои рапорты
-            if (!isBoss) {
-                query = query.eq('author_id', currentUserData.id);
-            }
-
-            const { data: reports, error } = await query;
+            const { data: reports, error } = await supabaseClient
+                .from('reports')
+                .select('*')
+                .order('created_at', { ascending: false });
 
             if (error || !reports || reports.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Рапортов не найдено</td></tr>'; return;
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Рапортов пока нет</td></tr>'; return;
             }
 
             tbody.innerHTML = reports.map(r => {
                 const dateStr = new Date(r.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const isApproved = r.status === 'approved';
+
+                let statusBadge = isApproved 
+                    ? `<span class="badge badge-approved">✅ Одобрен</span>` 
+                    : `<span class="badge badge-pending">🟡 На проверке</span>`;
+
+                let actionButtons = '';
+                if (!isApproved) {
+                    actionButtons = `
+                        <button class="btn btn-success" style="padding: 5px 10px; font-size: 11px; margin-right: 5px;" onclick="approveReport('${r.id}', '${r.nomenclature}', '${r.author_discord_id}')">✅ Одобрить</button>
+                        <button class="btn btn-danger" style="padding: 5px 10px; font-size: 11px;" onclick="rejectReport('${r.id}', '${r.nomenclature}', '${r.author_discord_id}')">❌ Отклонить</button>
+                    `;
+                } else {
+                    actionButtons = `<small style="color:#69f0ae;"><b>Проверил:</b><br>${r.processed_by || 'Офицер MP'}</small>`;
+                }
+
                 return `<tr class="fade-in">
                     <td><code>${r.nomenclature}</code><br><small style="color:var(--text-muted);">${dateStr}</small></td>
-                    <td>${r.author_name} <small>(${r.author_static})</small></td>
+                    <td><b>${r.author_name}</b><br><small>Статик: ${r.author_static}</small></td>
                     <td><strong style="color:#ff5252;">${r.violator_static}</strong></td>
-                    <td><b>${r.report_type}</b><br><small style="color:var(--text-muted);">${r.details}</small></td>
-                    <td><a href="${r.evidence}" target="_blank" style="color:#64b5f6;">Открыть</a></td>
-                    <td>
-                        ${isBoss ? `<button class="btn btn-danger" style="padding: 4px 8px; font-size: 10px;" onclick="deleteReport('${r.id}', '${r.nomenclature}', '${r.violator_static}')">Удалить</button>` : '-'}
-                    </td>
+                    <td><b>${r.report_type}</b><br><small style="color:var(--text-muted);">${r.details}</small><br><a href="${r.evidence}" target="_blank" style="color:#64b5f6; font-size:11px;">[Доказательства]</a></td>
+                    <td>${statusBadge}</td>
+                    <td>${actionButtons}</td>
                 </tr>`;
             }).join('');
         }
 
-        // =========================================================
-        // УДАЛЕНИЕ РАПОРТА С ОТПРАВКОЙ ЛОГА В DISCORD
-        // =========================================================
-        window.deleteReport = async (id, nomenclature, violator) => {
-            const reason = prompt(`Удаление рапорта ${nomenclature}.\nУкажите причину удаления для лога Discord:`);
+        // ОДОБРИТЬ РАПОРТ
+        window.approveReport = async (id, nomenclature, discordId) => {
+            if (!confirm(`Вы действительно хотите ОДОБРИТЬ рапорт ${nomenclature}?`)) return;
+
+            const officerInfo = `${currentUserData.full_name} (${currentUserData.static})`;
+
+            // Обновляем статус в базе данных
+            const { error } = await supabaseClient
+                .from('reports')
+                .update({ 
+                    status: 'approved', 
+                    processed_by: officerInfo,
+                    processed_at: new Date().toISOString()
+                })
+                .eq('id', id);
+
+            if (error) { alert('Ошибка: ' + error.message); return; }
+
+            // Уведомление в Discord канал
+            await fetch(CONFIG.DECISION_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: CONFIG.USERNAME,
+                    avatar_url: CONFIG.AVATAR_URL,
+                    content: `✅ **Рапорт ОДОБРЕН!** <@${discordId}>`,
+                    embeds: [{
+                        title: `🟢 Одобрен рапорт: ${nomenclature}`,
+                        color: 3060562, // Зеленый
+                        fields: [
+                            { name: "Заявитель", value: `<@${discordId}>`, inline: true },
+                            { name: "Проверил офицер", value: officerInfo, inline: true },
+                            { name: "Статус", value: "Принят к исполнению / Вынесено взыскание", inline: false }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }]
+                })
+            });
+
+            loadReports();
+        };
+
+        // ОТКЛОНИТЬ И ПОЛНОСТЬЮ УДАЛИТЬ РАПОРТ
+        window.rejectReport = async (id, nomenclature, discordId) => {
+            const reason = prompt(`Отклонение рапорта ${nomenclature}.\nУкажите причину отклонения:`);
             if (!reason) return;
 
+            const officerInfo = `${currentUserData.full_name} (${currentUserData.static})`;
+
+            // Удаляем из базы данных
             const { error } = await supabaseClient.from('reports').delete().eq('id', id);
             
-            if (error) {
-                alert('Ошибка при удалении: ' + error.message);
-                return;
-            }
+            if (error) { alert('Ошибка при удалении: ' + error.message); return; }
 
-            // Отправляем лог удаления в спец-канал
-            if (CONFIG.DELETE_WEBHOOK_URL) {
-                await fetch(CONFIG.DELETE_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: CONFIG.USERNAME + " [LOGS]",
-                        avatar_url: CONFIG.AVATAR_URL,
-                        content: `🗑️ **Лог удаления рапорта:**\n> Рапорт: \`${nomenclature}\`\n> Нарушитель: **${violator}**\n> Модератор: **${currentUserData.full_name}**\n> Причина: *${reason}*`
-                    })
-                });
-            }
+            // Уведомление в Discord канал о причинах отклонения
+            await fetch(CONFIG.DECISION_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: CONFIG.USERNAME,
+                    avatar_url: CONFIG.AVATAR_URL,
+                    content: `❌ **Рапорт ОТКЛОНЕН!** <@${discordId}>`,
+                    embeds: [{
+                        title: `🔴 Отклонен рапорт: ${nomenclature}`,
+                        color: 13000744, // Красный
+                        fields: [
+                            { name: "Заявитель", value: `<@${discordId}>`, inline: true },
+                            { name: "Отклонил офицер", value: officerInfo, inline: true },
+                            { name: "Причина отклонения", value: reason, inline: false }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }]
+                })
+            });
 
             loadReports();
         };
