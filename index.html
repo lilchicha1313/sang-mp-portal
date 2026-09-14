@@ -168,7 +168,7 @@
                 email: `${staticId}@sang.local`, password: password
             });
 
-            if (error) { msg.innerText = 'Ошибка: неверный статик или пароль!'; msg.style.color = 'red'; } 
+            if (error) { msg.innerText = 'Ошибка: ' + error.message; msg.style.color = 'red'; }
             else { msg.innerText = 'Успешно!'; msg.style.color = 'green'; setTimeout(() => { authModal.style.display = 'none'; loadProfile(data.user); }, 500); }
         };
 
