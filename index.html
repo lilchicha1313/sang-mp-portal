@@ -34,7 +34,7 @@
         .hero-card {
             background-color: var(--card-bg); border: 1px solid var(--border-color);
             border-top: 4px solid var(--accent-color); border-radius: 6px;
-            padding: 40px; max-width: 700px; width: 100%; text-align: center;
+            padding: 40px; max-width: 900px; width: 100%; text-align: center;
             box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
         
@@ -44,14 +44,14 @@
         
         .btn {
             background-color: var(--accent-color); color: white; border: none;
-            padding: 10px 25px; font-size: 14px; font-weight: bold; border-radius: 4px;
+            padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 4px;
             cursor: pointer; text-transform: uppercase; transition: background 0.2s, transform 0.1s, opacity 0.2s;
         }
         .btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
         .btn:active:not(:disabled) { transform: translateY(1px); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-danger { background-color: #b71c1c; }
-        .btn-blue { background-color: #1976d2; } /* Цвет для кнопки рапорта */
+        .btn-blue { background-color: #1976d2; }
         
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -62,7 +62,7 @@
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-card {
             background: var(--card-bg); border-top: 4px solid var(--accent-color);
-            padding: 30px; border-radius: 6px; width: 100%; max-width: 450px; position: relative; text-align: left;
+            padding: 30px; border-radius: 6px; width: 100%; max-width: 500px; position: relative; text-align: left;
             transform: scale(0.95) translateY(-10px); transition: transform 0.3s ease;
         }
         .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
@@ -98,13 +98,14 @@
         <div class="logo">🛡️ SANG <span>// Military Police</span></div>
         <nav>
             <a id="nav-home" class="active">Главная</a>
+            <a id="nav-reports" class="hidden">Реестр рапортов</a>
             <a id="nav-roster" class="hidden">Личный состав</a>
             <a id="nav-auth-btn" style="color: var(--accent-color);">Вход</a>
         </nav>
     </header>
 
     <main>
-        <!-- Экран для НЕавторизованных -->
+        <!-- Неавторизованный экран -->
         <div class="hero-card fade-in" id="hero-welcome">
             <div class="subtitle">Отдел Военной Полиции</div>
             <h1>Защита закона и порядка</h1>
@@ -112,8 +113,8 @@
             <button class="btn" onclick="openModal('auth-modal')">Войти в систему</button>
         </div>
 
-        <!-- ГЛАВНЫЙ ЭКРАН ПОСЛЕ ВХОДА (Dashboard) -->
-        <div class="hero-card hidden" id="dashboard-panel" style="max-width: 800px; text-align: left;">
+        <!-- ГЛАВНАЯ ПАНЕЛЬ ПОСЛЕ ВХОДА -->
+        <div class="hero-card hidden" id="dashboard-panel" style="text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                     <div class="subtitle">Панель управления</div>
@@ -129,15 +130,38 @@
             
             <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
             
-            <h3 style="margin-top: 0; color: var(--text-muted); font-size: 14px; text-transform: uppercase;">Доступные действия</h3>
+            <h3 style="margin-top: 0; color: var(--text-muted); font-size: 14px; text-transform: uppercase;">Быстрые действия</h3>
             <div style="display: flex; gap: 15px;">
-                <!-- КНОПКА ОТКРЫТИЯ РАПОРТА -->
-                <button class="btn btn-blue" onclick="openModal('report-modal')">📄 Подать рапорт</button>
+                <button class="btn btn-blue" onclick="openModal('report-modal')">📄 Подать рапорт на нарушение</button>
             </div>
         </div>
 
-        <!-- Админ-панель (Кадры) -->
-        <div class="hero-card hidden" id="admin-roster-panel" style="max-width: 900px; text-align: left;">
+        <!-- РЕЕСТР РАПОРТОВ -->
+        <div class="hero-card hidden" id="reports-panel" style="text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div class="subtitle">База данных MP</div>
+                    <h1 id="reports-title">Реестр рапортов</h1>
+                </div>
+                <button class="btn btn-blue" onclick="openModal('report-modal')">+ Подать рапорт</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Номенклатура / Дата</th>
+                        <th>Автор</th>
+                        <th>Нарушитель</th>
+                        <th>Причина</th>
+                        <th>Материалы</th>
+                        <th id="th-actions">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="reports-table-body"></tbody>
+            </table>
+        </div>
+
+        <!-- АДМИНКА (КАДРЫ) -->
+        <div class="hero-card hidden" id="admin-roster-panel" style="text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div><div class="subtitle">Управление кадрами</div><h1 style="margin-bottom:0;">Личный состав MP</h1></div>
                 <button class="btn" onclick="openModal('create-user-modal')">+ Добавить бойца</button>
@@ -170,7 +194,7 @@
             <h2>Добавить бойца</h2>
             <form id="create-user-form">
                 <div class="form-group"><label>Email</label><input type="text" id="new-email" required></div>
-                <div class="form-group"><label>Пароль (МИНИМУМ 6 СИМВОЛОВ)</label><input type="text" id="new-password" required minlength="6"></div>
+                <div class="form-group"><label>Пароль (мин. 6 символов)</label><input type="text" id="new-password" required minlength="6"></div>
                 <div class="form-group"><label>Статический ID</label><input type="text" id="new-static" required></div>
                 <div class="form-group"><label>Имя (IC)</label><input type="text" id="new-fullname" required></div>
                 <div class="form-group"><label>Звание</label><select id="new-rank"><option>Рекрут MP</option><option>Офицер MP</option><option>Начальник MP</option></select></div>
@@ -181,28 +205,33 @@
         </div>
     </div>
 
-    <!-- НОВАЯ: Модалка подачи рапорта -->
+    <!-- Модалка подачи рапорта -->
     <div class="modal-overlay" id="report-modal">
-        <div class="modal-card" style="border-top-color: #1976d2;"> <!-- Синяя полоска сверху -->
+        <div class="modal-card" style="border-top-color: #1976d2;">
             <button class="close-btn" onclick="closeModal('report-modal')">&times;</button>
-            <h2>Форма рапорта</h2>
+            <h2>Подача рапорта</h2>
             <form id="report-form">
                 <div class="form-group">
-                    <label>Тип рапорта</label>
+                    <label>Статик нарушителя</label>
+                    <input type="text" id="violator-static" placeholder="Например: 55102" required>
+                </div>
+                <div class="form-group">
+                    <label>Суть нарушения (Категория)</label>
                     <select id="report-type">
-                        <option value="Выдача взыскания">Рапорт на выдачу взыскания</option>
-                        <option value="Проделанная работа">Рапорт о проделанной работе</option>
-                        <option value="Запрос увольнения">Рапорт на увольнение / ПСЖ</option>
-                        <option value="Прочее">Прочее</option>
+                        <option value="1.1_ustav">Нарушение субординации (1.1 Устав)</option>
+                        <option value="awol">Самовольное оставление части (AWOL)</option>
+                        <option value="nepodch">Невыполнение приказа</option>
+                        <option value="mat_damage">Порча государственного имущества</option>
+                        <option value="Прочее">Прочее нарушение</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Суть / Описание ситуации</label>
-                    <textarea id="report-desc" placeholder="Подробно опишите ситуацию..." required></textarea>
+                    <label>Подробное описание ситуации</label>
+                    <textarea id="report-desc" placeholder="Опишите детально, что произошло..." required></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Материалы / Доказательства (ссылка)</label>
-                    <input type="text" id="report-proof" placeholder="https://imgur.com/... или YouTube">
+                    <label>Доказательства (Ссылка)</label>
+                    <input type="text" id="report-proof" placeholder="https://imgur.com/... или YouTube" required>
                 </div>
                 <button type="submit" class="btn btn-blue" id="report-submit-btn" style="width: 100%;">Отправить рапорт</button>
             </form>
@@ -212,18 +241,36 @@
 
     <script>
         // =========================================================
-        // ВСТАВЬ СЮДА СВОИ КЛЮЧИ ИЗ SUPABASE:
+        // НАСТРОЙКИ (ВСТАВЬ СВОИ ДАННЫЕ ВЕБХУКОВ И SUPABASE)
         // =========================================================
         const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
         
+        const CONFIG = {
+            POST_URL: "https://discord.com/api/webhooks/1154785067957244074/O47_TrBPKD02RB97Os8C9DBxme2fuJkayCSX5xk9a4kO09vaUie9-L_s1lusqdc_d1Ia", 
+            DELETE_WEBHOOK_URL: "https://discord.com/api/webhooks/1287120154903187456/1RvnWUlgzrUPm7Gsq-LmTSPPz4fNnbj_-wTyC7SGJQvs7RE8YsWLMjulbg1mkVJqIrvq", 
+            USERNAME: "San Andreas National Guard", 
+            AVATAR_URL: "https://cdn.discordapp.com/attachments/1154716269837303818/1548301468032041000/SANG.png",
+            COLOR: 16711680,
+            PING_ROLE_ID: "941408248894992414",
+            VIOLATOR_DAYS_LIMIT: 90,
+            NOMENCLATURE_MAP: {
+                "1.1_ustav": "Нарушение субординации (1.1 Устав)",
+                "awol": "Самовольное оставление части (AWOL)",
+                "nepodch": "Невыполнение приказа",
+                "mat_damage": "Порча государственного имущества"
+            }
+        };
+
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const supabaseCreator = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
             auth: { storageKey: 'temp-creator-key', persistSession: false }
         });
 
+        let currentUserData = null;
+
         function switchPanel(panelId) {
-            ['hero-welcome', 'dashboard-panel', 'admin-roster-panel'].forEach(id => {
+            ['hero-welcome', 'dashboard-panel', 'reports-panel', 'admin-roster-panel'].forEach(id => {
                 const el = document.getElementById(id);
                 el.classList.add('hidden');
                 el.classList.remove('fade-in');
@@ -236,17 +283,16 @@
         window.openModal = (id) => document.getElementById(id).classList.add('active');
         window.closeModal = (id) => {
             document.getElementById(id).classList.remove('active');
-            // Очищаем сообщения об ошибках при закрытии модалок
             document.querySelectorAll('.status-msg').forEach(msg => msg.innerText = '');
         }
 
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => {
-            const isProfileLoaded = document.getElementById('profile-name').innerText !== 'Загрузка...';
-            switchPanel(isProfileLoaded ? 'dashboard-panel' : 'hero-welcome');
+            switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
         };
+        document.getElementById('nav-reports').onclick = () => { switchPanel('reports-panel'); loadReports(); };
 
-        // Вход
+        // Авторизация
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-submit-btn');
@@ -267,15 +313,12 @@
             }
         };
 
-        // Глобальные переменные для хранения данных бойца (понадобится для вебхука)
-        let currentUserData = null;
-
-        // Загрузка профиля (Dashboard)
+        // Загрузка личного кабинета
         async function loadProfile(user) {
             const { data } = await supabaseClient.from('unit_roster').select('*').eq('id', user.id).single();
             if (data) {
-                currentUserData = data; // Сохраняем, чтобы использовать при отправке рапорта
-                switchPanel('dashboard-panel'); // Перекидываем на Главную с Панелью Управления
+                currentUserData = data;
+                switchPanel('dashboard-panel');
                 
                 document.getElementById('profile-name').innerText = data.full_name;
                 document.getElementById('profile-static').innerText = data.static;
@@ -285,7 +328,10 @@
                 const authBtn = document.getElementById('nav-auth-btn');
                 authBtn.innerText = 'Кабинет'; authBtn.onclick = () => switchPanel('dashboard-panel');
 
-                if (data.rank.includes('Начальник') || data.rank.includes('Зам')) {
+                document.getElementById('nav-reports').classList.remove('hidden');
+
+                const isBoss = data.rank.includes('Начальник') || data.rank.includes('Зам');
+                if (isBoss) {
                     const navRoster = document.getElementById('nav-roster');
                     navRoster.classList.remove('hidden');
                     navRoster.onclick = () => { switchPanel('admin-roster-panel'); loadRoster(); };
@@ -293,44 +339,189 @@
             }
         }
 
-        // --- ЛОГИКА ОТПРАВКИ РАПОРТА (ПОДГОТОВКА ПОД WEBHOOK) ---
+        // =========================================================
+        // ЛОГИКА ПОДАЧИ РАПОРТА С АВТО-НОМЕНКЛАТУРОЙ И ИСТОРИЕЙ
+        // =========================================================
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn');
             const msg = document.getElementById('report-status-msg');
-            btn.disabled = true; btn.innerText = 'Отправка...'; msg.innerText = '';
+            btn.disabled = true; btn.innerText = 'Генерация...'; msg.innerText = '';
 
-            // Собираем данные
-            const reportData = {
-                authorName: currentUserData.full_name,
-                authorStatic: currentUserData.static,
-                authorRank: currentUserData.rank,
-                type: document.getElementById('report-type').value,
-                desc: document.getElementById('report-desc').value,
-                proof: document.getElementById('report-proof').value || 'Нет прикрепленных материалов'
-            };
+            const violatorStatic = document.getElementById('violator-static').value.trim();
+            const rawType = document.getElementById('report-type').value;
+            const niceReason = CONFIG.NOMENCLATURE_MAP[rawType] || rawType;
+            const desc = document.getElementById('report-desc').value.trim();
+            const proof = document.getElementById('report-proof').value.trim();
 
-            // ЗДЕСЬ БУДЕТ ВЕБХУК. Пока просто имитируем успешную отправку задержкой в 1 секунду.
             try {
-                // await fetch('ТУТ_БУДЕТ_ССЫЛКА_НА_ВЕБХУК', { ... }) 
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Временная заглушка
+                // 1. Считаем личный счетчик рапортов автора для номенклатуры
+                const { count: authorReportCount } = await supabaseClient
+                    .from('reports')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('author_static', currentUserData.static);
 
-                msg.innerText = 'Рапорт успешно отправлен!'; 
-                msg.style.color = '#69f0ae'; 
+                const nextNumber = (authorReportCount || 0) + 1;
+                const nomenclature = `SANG-MP/REPORT-MS-${currentUserData.static}/${nextNumber}`;
+
+                // 2. Ищем прошлые нарушения нарушителя за последние 90 дней
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - CONFIG.VIOLATOR_DAYS_LIMIT);
+
+                const { data: pastViolations } = await supabaseClient
+                    .from('reports')
+                    .select('*')
+                    .eq('violator_static', violatorStatic)
+                    .gte('created_at', cutoffDate.toISOString())
+                    .order('created_at', { ascending: false });
+
+                const pastCount = pastViolations ? pastViolations.length : 0;
+                const totalViolations = pastCount + 1;
+
+                // 3. Сохраняем рапорт в Supabase
+                const { error: dbError } = await supabaseClient.from('reports').insert([{
+                    author_id: currentUserData.id,
+                    author_static: currentUserData.static,
+                    author_name: currentUserData.full_name,
+                    author_rank: currentUserData.rank,
+                    violator_static: violatorStatic,
+                    report_type: niceReason,
+                    details: desc,
+                    evidence: proof,
+                    nomenclature: nomenclature
+                }]);
+
+                if (dbError) throw dbError;
+
+                // 4. Формируем сообщение для Discord
+                let historyText = "";
+                if (pastCount > 0) {
+                    historyText = pastViolations.slice(0, 5).map(v => {
+                        const dateStr = new Date(v.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+                        return `▪ **${dateStr}** | \`${v.nomenclature}\` | ${v.report_type}`;
+                    }).join('\n');
+                }
+
+                const embedFields = [
+                    { name: "Имя сотрудника оформившего рапорт", value: `${currentUserData.full_name} (Статик: ${currentUserData.static})`, inline: false },
+                    { name: "Номер удостоверения нарушителя (статик)", value: violatorStatic, inline: false },
+                    { name: "Суть нарушения", value: niceReason, inline: false },
+                    { name: "Подробное описание", value: desc, inline: false },
+                    { name: "Доказательства", value: proof, inline: false }
+                ];
+
+                if (historyText) {
+                    embedFields.push({
+                        name: `📜 Прошлые нарушения за ${CONFIG.VIOLATOR_DAYS_LIMIT} дн.`,
+                        value: historyText,
+                        inline: false
+                    });
+                }
+
+                let pingContent = `🔔 **Поступил новый рапорт!** <@&${CONFIG.PING_ROLE_ID}>`;
+
+                // 5. Отправляем в Discord через Fetch
+                await fetch(CONFIG.POST_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: CONFIG.USERNAME,
+                        avatar_url: CONFIG.AVATAR_URL,
+                        content: pingContent,
+                        embeds: [{
+                            title: `📝 Рапорт: ${nomenclature} | ⚠️ Нарушений (за ${CONFIG.VIOLATOR_DAYS_LIMIT} дн.): ${totalViolations}`,
+                            color: CONFIG.COLOR,
+                            fields: embedFields,
+                            footer: { text: "Система автоматической обработки рапортов MP" },
+                            timestamp: new Date().toISOString()
+                        }]
+                    })
+                });
+
+                msg.innerText = 'Рапорт успешно зарегистрирован!'; msg.style.color = '#69f0ae'; 
                 setTimeout(() => { 
                     closeModal('report-modal'); 
                     btn.disabled = false; btn.innerText = 'Отправить рапорт'; 
                     document.getElementById('report-form').reset(); 
-                }, 1500);
+                    if (!document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
+                }, 1200);
 
-            } catch (error) {
-                msg.innerText = 'Ошибка при отправке!'; 
-                msg.style.color = '#ff5252';
+            } catch (err) {
+                msg.innerText = 'Ошибка: ' + err.message; msg.style.color = '#ff5252';
                 btn.disabled = false; btn.innerText = 'Отправить рапорт';
             }
         };
 
-        // Создание бойца
+        // =========================================================
+        // ЗАГРУЗКА И ФИЛЬТРАЦИЯ РАПОРТОВ ПО РОЛЯМ
+        // =========================================================
+        async function loadReports() {
+            const tbody = document.getElementById('reports-table-body');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Загрузка рапортов...</td></tr>';
+
+            const isBoss = currentUserData.rank.includes('Начальник') || currentUserData.rank.includes('Зам');
+            
+            document.getElementById('reports-title').innerText = isBoss ? "Все рапорты подразделения" : "Мои поданные рапорты";
+
+            let query = supabaseClient.from('reports').select('*').order('created_at', { ascending: false });
+
+            // Обычный офицер видит только свои рапорты
+            if (!isBoss) {
+                query = query.eq('author_id', currentUserData.id);
+            }
+
+            const { data: reports, error } = await query;
+
+            if (error || !reports || reports.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Рапортов не найдено</td></tr>'; return;
+            }
+
+            tbody.innerHTML = reports.map(r => {
+                const dateStr = new Date(r.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                return `<tr class="fade-in">
+                    <td><code>${r.nomenclature}</code><br><small style="color:var(--text-muted);">${dateStr}</small></td>
+                    <td>${r.author_name} <small>(${r.author_static})</small></td>
+                    <td><strong style="color:#ff5252;">${r.violator_static}</strong></td>
+                    <td><b>${r.report_type}</b><br><small style="color:var(--text-muted);">${r.details}</small></td>
+                    <td><a href="${r.evidence}" target="_blank" style="color:#64b5f6;">Открыть</a></td>
+                    <td>
+                        ${isBoss ? `<button class="btn btn-danger" style="padding: 4px 8px; font-size: 10px;" onclick="deleteReport('${r.id}', '${r.nomenclature}', '${r.violator_static}')">Удалить</button>` : '-'}
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        // =========================================================
+        // УДАЛЕНИЕ РАПОРТА С ОТПРАВКОЙ ЛОГА В DISCORD
+        // =========================================================
+        window.deleteReport = async (id, nomenclature, violator) => {
+            const reason = prompt(`Удаление рапорта ${nomenclature}.\nУкажите причину удаления для лога Discord:`);
+            if (!reason) return;
+
+            const { error } = await supabaseClient.from('reports').delete().eq('id', id);
+            
+            if (error) {
+                alert('Ошибка при удалении: ' + error.message);
+                return;
+            }
+
+            // Отправляем лог удаления в спец-канал
+            if (CONFIG.DELETE_WEBHOOK_URL) {
+                await fetch(CONFIG.DELETE_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: CONFIG.USERNAME + " [LOGS]",
+                        avatar_url: CONFIG.AVATAR_URL,
+                        content: `🗑️ **Лог удаления рапорта:**\n> Рапорт: \`${nomenclature}\`\n> Нарушитель: **${violator}**\n> Модератор: **${currentUserData.full_name}**\n> Причина: *${reason}*`
+                    })
+                });
+            }
+
+            loadReports();
+        };
+
+        // Логика Кадров
         document.getElementById('create-user-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('create-submit-btn');
@@ -354,7 +545,7 @@
                 }]);
                 
                 if (dbError) {
-                    msg.innerText = 'Ошибка Базы: этот статик уже занят!'; msg.style.color = '#ff5252'; 
+                    msg.innerText = 'Ошибка БД: статик уже занят!'; msg.style.color = '#ff5252'; 
                     btn.disabled = false; btn.innerText = 'Создать'; return; 
                 }
 
@@ -367,10 +558,9 @@
             }
         };
 
-        // Таблица и Увольнение
         async function loadRoster() {
             const tbody = document.getElementById('roster-table-body');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Загрузка данных...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Загрузка...</td></tr>';
             const { data } = await supabaseClient.from('unit_roster').select('*').order('full_name', { ascending: true });
             
             if (!data || data.length === 0) {
@@ -383,7 +573,7 @@
         }
 
         window.fire = async (id) => { 
-            if(confirm('Удалить бойца из базы кадров? Он потеряет доступ.')) { 
+            if(confirm('Удалить бойца из базы кадров?')) { 
                 const { error } = await supabaseClient.from('unit_roster').delete().eq('id', id); 
                 if (error) alert('Ошибка: ' + error.message); else loadRoster();
             } 
