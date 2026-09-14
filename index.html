@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SANG | Военная Полиция</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-color: #0b0c10; --card-bg: #14161f; --accent-color: #b71c1c;
+            --accent-hover: #c62828; --text-main: #eceff1; --text-muted: #90a4ae; --border-color: #263238;
+        }
+        body {
+            margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color); color: var(--text-main);
+            display: flex; flex-direction: column; min-height: 100vh;
+        }
+        header {
+            background-color: var(--card-bg); border-bottom: 2px solid var(--accent-color);
+            padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .logo { font-weight: bold; font-size: 18px; letter-spacing: 1.5px; color: #fff; text-transform: uppercase; }
+        .logo span { color: var(--accent-color); }
+        nav a { color: var(--text-muted); text-decoration: none; margin-left: 20px; font-size: 14px; text-transform: uppercase; font-weight: 600; cursor: pointer; }
+        nav a:hover, nav a.active { color: #fff; }
+        main { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .hero-card {
+            background-color: var(--card-bg); border: 1px solid var(--border-color);
+            border-top: 4px solid var(--accent-color); border-radius: 6px;
+            padding: 40px; max-width: 700px; width: 100%; text-align: center;
+        }
+        h1 { margin-top: 0; color: #fff; font-size: 24px; text-transform: uppercase; }
+        .subtitle { font-size: 13px; color: var(--accent-color); font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
+        p { color: var(--text-muted); line-height: 1.5; font-size: 14px; }
+        .btn {
+            background-color: var(--accent-color); color: white; border: none;
+            padding: 10px 25px; font-size: 14px; font-weight: bold; border-radius: 4px;
+            cursor: pointer; text-transform: uppercase;
+        }
+        .btn:hover { background-color: var(--accent-hover); }
+        .btn-danger { background-color: #b71c1c; }
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-card {
+            background: var(--card-bg); border-top: 4px solid var(--accent-color);
+            padding: 30px; border-radius: 6px; width: 100%; max-width: 400px; position: relative; text-align: left;
+        }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 9px; background: #0b0c10; border: 1px solid var(--border-color);
+            color: #fff; border-radius: 4px; box-sizing: border-box;
+        }
+        .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+        .status-msg { margin-top: 15px; font-size: 13px; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; text-align: left; }
+        th, td { padding: 10px; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">🛡️ SANG <span>// Military Police</span></div>
+        <nav>
+            <a id="nav-home" class="active">Главная</a>
+            <a id="nav-roster" style="display:none;">Личный состав</a>
+            <a id="nav-auth-btn" style="color: var(--accent-color);">Вход</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Приветствие -->
+        <div class="hero-card" id="hero-welcome">
+            <div class="subtitle">Отдел Военной Полиции</div>
+            <h1>Защита закона и порядка</h1>
+            <button class="btn" id="open-auth-btn">Войти в систему</button>
+        </div>
+
+        <!-- Профиль -->
+        <div class="hero-card" id="user-profile-card" style="display:none;">
+            <div class="subtitle">Личное дело офицера</div>
+            <h1 id="profile-name">Загрузка...</h1>
+            <p><strong>Статик:</strong> <span id="profile-static">-</span> | <strong>Звание:</strong> <span id="profile-rank">-</span> | <strong>Позывной:</strong> <span id="profile-callsign">-</span></p>
+            <br><button class="btn" id="logout-btn" style="background-color: #37474f;">Выйти</button>
+        </div>
+
+        <!-- Кадры -->
+        <div class="hero-card" id="admin-roster-panel" style="display:none; max-width: 900px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div><div class="subtitle">Управление кадрами</div><h1>Личный состав MP</h1></div>
+                <button class="btn" id="open-create-user-modal">+ Добавить бойца</button>
+            </div>
+            <table>
+                <thead><tr><th>Статик</th><th>Имя</th><th>Звание</th><th>Позывной</th><th>Действие</th></tr></thead>
+                <tbody id="roster-table-body"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Модалка входа -->
+    <div class="modal-overlay" id="auth-modal">
+        <div class="modal-card">
+            <button class="close-btn" id="close-modal-btn">&times;</button>
+            <h2>Вход по статику</h2>
+            <form id="auth-form">
+                <div class="form-group"><label>Ваш Статик</label><input type="text" id="login-static" required></div>
+                <div class="form-group"><label>Пароль</label><input type="password" id="login-password" required></div>
+                <button type="submit" class="btn" style="width: 100%;">Войти</button>
+            </form>
+            <div class="status-msg" id="status-msg"></div>
+        </div>
+    </div>
+
+    <!-- Модалка создания юзера -->
+    <div class="modal-overlay" id="create-user-modal">
+        <div class="modal-card">
+            <button class="close-btn" id="close-create-modal">&times;</button>
+            <h2>Добавить бойца</h2>
+            <form id="create-user-form">
+                <div class="form-group"><label>Статик</label><input type="text" id="new-static" required></div>
+                <div class="form-group"><label>Пароль</label><input type="text" id="new-password" required></div>
+                <div class="form-group"><label>Имя (IC)</label><input type="text" id="new-fullname" required></div>
+                <div class="form-group"><label>Звание</label><select id="new-rank"><option>Рекрут MP</option><option>Офицер MP</option><option>Начальник MP</option></select></div>
+                <div class="form-group"><label>Позывной</label><input type="text" id="new-callsign"></div>
+                <button type="submit" class="btn" style="width: 100%;">Создать</button>
+            </form>
+            <div class="status-msg" id="create-status-msg"></div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // ВСТАВЬ СЮДА СВОИ КЛЮЧИ ИЗ ШАГА 4:
+        // =========================================================
+        const SUPABASE_URL = 'ВСТАВЬ_СЮДА_PROJECT_URL';
+        const SUPABASE_KEY = 'ВСТАВЬ_СЮДА_КЛЮЧ_ANON_PUBLIC';
+        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Логика переключения окон
+        const authModal = document.getElementById('auth-modal');
+        const createUserModal = document.getElementById('create-user-modal');
+        
+        document.getElementById('open-auth-btn').onclick = () => authModal.style.display = 'flex';
+        document.getElementById('nav-auth-btn').onclick = () => authModal.style.display = 'flex';
+        document.getElementById('close-modal-btn').onclick = () => authModal.style.display = 'none';
+        
+        document.getElementById('open-create-user-modal').onclick = () => createUserModal.style.display = 'flex';
+        document.getElementById('close-create-modal').onclick = () => createUserModal.style.display = 'none';
+
+        document.getElementById('nav-home').onclick = () => {
+            document.getElementById('admin-roster-panel').style.display = 'none';
+            document.getElementById('hero-welcome').style.display = document.getElementById('user-profile-card').style.display === 'block' ? 'none' : 'block';
+        };
+
+        // Вход
+        document.getElementById('auth-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const staticId = document.getElementById('login-static').value.trim();
+            const password = document.getElementById('login-password').value;
+            const msg = document.getElementById('status-msg');
+            msg.innerText = 'Загрузка...';
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: `${staticId}@sang.local`, password: password
+            });
+
+            if (error) { msg.innerText = 'Ошибка: неверный статик или пароль!'; msg.style.color = 'red'; } 
+            else { msg.innerText = 'Успешно!'; msg.style.color = 'green'; setTimeout(() => { authModal.style.display = 'none'; loadProfile(data.user); }, 500); }
+        };
+
+        // Загрузка профиля
+        async function loadProfile(user) {
+            const { data } = await supabaseClient.from('unit_roster').select('*').eq('id', user.id).single();
+            if (data && data.is_active) {
+                document.getElementById('hero-welcome').style.display = 'none';
+                document.getElementById('user-profile-card').style.display = 'block';
+                document.getElementById('profile-name').innerText = data.full_name;
+                document.getElementById('profile-static').innerText = data.static;
+                document.getElementById('profile-rank').innerText = data.rank;
+                document.getElementById('profile-callsign').innerText = data.callsign || '-';
+                document.getElementById('nav-auth-btn').innerText = 'Кабинет';
+
+                if (data.rank.includes('Начальник')) {
+                    document.getElementById('nav-roster').style.display = 'inline';
+                    document.getElementById('nav-roster').onclick = () => {
+                        document.getElementById('user-profile-card').style.display = 'none';
+                        document.getElementById('admin-roster-panel').style.display = 'block';
+                        loadRoster();
+                    };
+                }
+            }
+        }
+
+        // Создание бойца
+        document.getElementById('create-user-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const staticId = document.getElementById('new-static').value;
+            const password = document.getElementById('new-password').value;
+            const msg = document.getElementById('create-status-msg');
+            msg.innerText = 'Создание...';
+
+            const { data, error } = await supabaseClient.auth.signUp({ email: `${staticId}@sang.local`, password: password });
+            if (error) { msg.innerText = 'Ошибка: ' + error.message; return; }
+
+            if (data.user) {
+                await supabaseClient.from('unit_roster').insert([{
+                    id: data.user.id, static: staticId, full_name: document.getElementById('new-fullname').value,
+                    rank: document.getElementById('new-rank').value, callsign: document.getElementById('new-callsign').value, is_active: true
+                }]);
+                msg.innerText = 'Готово!'; setTimeout(() => { createUserModal.style.display = 'none'; loadRoster(); }, 1000);
+            }
+        };
+
+        // Список бойцов
+        async function loadRoster() {
+            const tbody = document.getElementById('roster-table-body');
+            const { data } = await supabaseClient.from('unit_roster').select('*').eq('is_active', true);
+            tbody.innerHTML = data.map(s => `<tr><td>${s.static}</td><td>${s.full_name}</td><td>${s.rank}</td><td>${s.callsign || '-'}</td>
+                <td><button class="btn btn-danger" onclick="fire('${s.id}')">Уволить</button></td></tr>`).join('');
+        }
+
+        window.fire = async (id) => { if(confirm('Уволить?')) { await supabaseClient.from('unit_roster').update({is_active: false}).eq('id', id); loadRoster(); } };
+        
+        document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
+        supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
+    </script>
+</body>
+</html>
