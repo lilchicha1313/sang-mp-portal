@@ -104,9 +104,9 @@
     <div class="modal-overlay" id="auth-modal">
         <div class="modal-card">
             <button class="close-btn" id="close-modal-btn">&times;</button>
-            <h2>Вход по статику</h2>
+            <h2>Вход в систему</h2>
             <form id="auth-form">
-                <div class="form-group"><label>Ваш Статик</label><input type="text" id="login-static" required></div>
+                <div class="form-group"><label>Логин (Email)</label><input type="text" id="login-static" placeholder="41042@sang.local" required></div>
                 <div class="form-group"><label>Пароль</label><input type="password" id="login-password" required></div>
                 <button type="submit" class="btn" style="width: 100%;">Войти</button>
             </form>
@@ -120,8 +120,9 @@
             <button class="close-btn" id="close-create-modal">&times;</button>
             <h2>Добавить бойца</h2>
             <form id="create-user-form">
-                <div class="form-group"><label>Статик</label><input type="text" id="new-static" required></div>
+                <div class="form-group"><label>Email (например: 12345@sang.local)</label><input type="text" id="new-email" required></div>
                 <div class="form-group"><label>Пароль</label><input type="text" id="new-password" required></div>
+                <div class="form-group"><label>Статический ID</label><input type="text" id="new-static" required></div>
                 <div class="form-group"><label>Имя (IC)</label><input type="text" id="new-fullname" required></div>
                 <div class="form-group"><label>Звание</label><select id="new-rank"><option>Рекрут MP</option><option>Офицер MP</option><option>Начальник MP</option></select></div>
                 <div class="form-group"><label>Позывной</label><input type="text" id="new-callsign"></div>
@@ -133,14 +134,13 @@
 
     <script>
         // =========================================================
-        // ВСТАВЬ СЮДА СВОИ КЛЮЧИ ИЗ ШАГА 4:
+        // ВСТАВЬ СЮДА СВОИ КЛЮЧИ ИЗ SUPABASE (Project Settings -> API):
         // =========================================================
         const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
         
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Логика переключения окон
         const authModal = document.getElementById('auth-modal');
         const createUserModal = document.getElementById('create-user-modal');
         
@@ -159,17 +159,23 @@
         // Вход
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
-            const staticId = document.getElementById('login-static').value.trim();
+            const emailInput = document.getElementById('login-static').value.trim();
             const password = document.getElementById('login-password').value;
             const msg = document.getElementById('status-msg');
             msg.innerText = 'Загрузка...';
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: `${staticId}@sang.local`, password: password
+                email: emailInput, password: password
             });
 
-            if (error) { msg.innerText = 'Ошибка: ' + error.message; msg.style.color = 'red'; }
-            else { msg.innerText = 'Успешно!'; msg.style.color = 'green'; setTimeout(() => { authModal.style.display = 'none'; loadProfile(data.user); }, 500); }
+            if (error) { 
+                msg.innerText = 'Ошибка: ' + error.message; 
+                msg.style.color = 'red'; 
+            } else { 
+                msg.innerText = 'Успешно!'; 
+                msg.style.color = 'green'; 
+                setTimeout(() => { authModal.style.display = 'none'; loadProfile(data.user); }, 500); 
+            }
         };
 
         // Загрузка профиля
@@ -198,20 +204,21 @@
         // Создание бойца
         document.getElementById('create-user-form').onsubmit = async (e) => {
             e.preventDefault();
-            const staticId = document.getElementById('new-static').value;
+            const email = document.getElementById('new-email').value.trim();
             const password = document.getElementById('new-password').value;
+            const staticId = document.getElementById('new-static').value.trim();
             const msg = document.getElementById('create-status-msg');
             msg.innerText = 'Создание...';
 
-            const { data, error } = await supabaseClient.auth.signUp({ email: `${staticId}@sang.local`, password: password });
-            if (error) { msg.innerText = 'Ошибка: ' + error.message; return; }
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) { msg.innerText = 'Ошибка: ' + error.message; msg.style.color = 'red'; return; }
 
             if (data.user) {
                 await supabaseClient.from('unit_roster').insert([{
                     id: data.user.id, static: staticId, full_name: document.getElementById('new-fullname').value,
                     rank: document.getElementById('new-rank').value, callsign: document.getElementById('new-callsign').value, is_active: true
                 }]);
-                msg.innerText = 'Готово!'; setTimeout(() => { createUserModal.style.display = 'none'; loadRoster(); }, 1000);
+                msg.innerText = 'Готово!'; msg.style.color = 'green'; setTimeout(() => { createUserModal.style.display = 'none'; loadRoster(); }, 1000);
             }
         };
 
