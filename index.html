@@ -106,7 +106,7 @@
         .badge { padding: 6px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-block; border: 1px solid transparent; }
         .badge-pending { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
         .badge-approved { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
-        .badge-rejected { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+        .badge-rejected { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.4); text-shadow: 0 0 8px rgba(239,68,68,0.5); }
 
         .pre-wrap { white-space: pre-wrap; word-wrap: break-word; }
         .hidden { display: none !important; }
@@ -385,8 +385,6 @@
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">База данных пуста</td></tr>'; return;
             }
 
-            const isBoss = currentUserData && (currentUserData.rank.includes('Начальник') || currentUserData.rank.includes('Зам'));
-
             tbody.innerHTML = reports.map(r => {
                 const dateStr = new Date(r.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                 const isApproved = r.status === 'approved';
@@ -394,27 +392,25 @@
 
                 let statusBadge = '';
                 if (isApproved) statusBadge = `<span class="badge badge-approved">✅ Одобрен</span>`;
-                else if (isRejected) statusBadge = `<span class="badge badge-rejected" title="${r.reject_reason || ''}">❌ Отклонен</span>`;
+                else if (isRejected) statusBadge = `<span class="badge badge-rejected" title="${r.reject_reason || ''}">❌ Отклонён</span>`;
                 else statusBadge = `<span class="badge badge-pending">🟡 Ожидает</span>`;
 
                 let actionButtons = '';
                 if (!isApproved && !isRejected) {
-                    // Ожидает проверки
+                    // Ожидает проверки - доступны кнопки Одобрить и Отклонить
                     actionButtons = `
                         <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px; margin-right: 5px;" onclick="approveReport('${r.id}')" title="Одобрить">✓</button>
                         <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="rejectReport('${r.id}')" title="Отклонить">✕</button>
                     `;
-                } else if (isRejected && isBoss) {
-                    // Отклонен, но босс может пересмотреть
+                } else if (isRejected) {
+                    // Отклонен - выводим причину, кто отклонил, и кнопку пересмотра для любого сотрудника MP
                     actionButtons = `
-                        <div style="font-size: 10px; color: #f87171; margin-bottom: 5px;">Отклонил: ${r.processed_by}</div>
+                        <div style="font-size: 10px; color: #f87171; margin-bottom: 5px;">Отклонил: ${r.processed_by || 'Офицер'}</div>
                         <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${r.id}')">🔄 Пересмотр</button>
                     `;
                 } else {
-                    // Одобрено (или отклонено и смотрит не босс)
-                    const colorInfo = isApproved ? '#34d399' : '#f87171';
-                    const actionWord = isApproved ? 'Одобрил' : 'Отклонил';
-                    actionButtons = `<small style="color:${colorInfo};"><b>${actionWord}:</b><br>${r.processed_by || 'Офицер'}</small>`;
+                    // Одобрено
+                    actionButtons = `<small style="color:#34d399;"><b>Одобрил:</b><br>${r.processed_by || 'Офицер'}</small>`;
                 }
 
                 return `<tr class="fade-in">
