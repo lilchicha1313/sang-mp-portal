@@ -3,175 +3,247 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SANG | Military Police Terminal</title>
+    <title>SANG // MILITARY POLICE TACTICAL TERMINAL</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; }
         
         :root {
-            --bg-color: #07090f; --card-bg: rgba(16, 20, 31, 0.85); --accent-color: #d32f2f;
-            --accent-glow: rgba(211, 47, 47, 0.4); --text-main: #e2e8f0; --text-muted: #94a3b8; 
-            --border-color: rgba(255, 255, 255, 0.1); --success-color: #10b981; --warning-color: #f59e0b;
+            --bg-base: #030508;
+            --bg-grid: rgba(239, 68, 68, 0.03);
+            --card-bg: rgba(8, 12, 20, 0.92);
+            --accent-red: #ff1e3c;
+            --accent-glow: rgba(255, 30, 60, 0.4);
+            --accent-blue: #00f0ff;
+            --accent-blue-glow: rgba(0, 240, 255, 0.3);
+            --text-main: #f1f5f9;
+            --text-muted: #64748b;
+            --border-color: rgba(255, 30, 60, 0.2);
+            --border-blue: rgba(0, 240, 255, 0.2);
+            --success: #00ff66;
+            --warning: #ffb700;
         }
         
         body {
-            margin: 0; padding: 0; font-family: 'Inter', sans-serif;
-            background: radial-gradient(circle at top, #111827 0%, var(--bg-color) 100%);
+            margin: 0; padding: 0; font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-base);
+            background-image: 
+                linear-gradient(to right, var(--bg-grid) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--bg-grid) 1px, transparent 1px);
+            background-size: 24px 24px;
             color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh;
-            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        /* Сканирующая линия (киберпанк эффект) */
+        body::before {
+            content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px; z-index: 9999; pointer-events: none; opacity: 0.3;
         }
 
         /* ТАКТИЧЕСКИЙ HEADER */
         header {
-            background: rgba(10, 13, 20, 0.9); border-bottom: 1px solid var(--border-color);
+            background: rgba(3, 5, 8, 0.95); border-bottom: 2px solid var(--accent-red);
             padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px);
-            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+            position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px var(--accent-glow);
         }
-        .logo { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 2px; color: #fff; text-transform: uppercase; display: flex; align-items: center; gap: 10px;}
-        .logo span { color: var(--accent-color); text-shadow: 0 0 10px var(--accent-glow); }
+        .logo { 
+            font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 22px; 
+            letter-spacing: 3px; color: #fff; text-transform: uppercase; display: flex; align-items: center; gap: 12px;
+        }
+        .logo span { color: var(--accent-red); text-shadow: 0 0 12px var(--accent-red); }
+        .logo-dot { width: 8px; height: 8px; background: var(--success); box-shadow: 0 0 8px var(--success); border-radius: 50%; animation: pulse-dot 1.5s infinite; }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 12px var(--success); }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
         
-        nav { display: flex; align-items: center; gap: 20px; }
-        nav a { color: var(--text-muted); text-decoration: none; font-size: 13px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; cursor: pointer; transition: all 0.3s; }
-        nav a:hover, nav a.active { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
+        nav { display: flex; align-items: center; gap: 25px; }
+        nav a { 
+            color: var(--text-muted); text-decoration: none; font-size: 12px; text-transform: uppercase; 
+            font-weight: 700; letter-spacing: 2px; cursor: pointer; transition: all 0.3s; position: relative; padding: 5px 0;
+        }
+        nav a::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background: var(--accent-blue); transition: width 0.3s;
+        }
+        nav a:hover, nav a.active { color: var(--accent-blue); text-shadow: 0 0 10px var(--accent-blue-glow); }
+        nav a:hover::after, nav a.active::after { width: 100%; }
         
         main { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 40px 20px; width: 100%; }
         
-        /* КАРТОЧКИ (Стеклянный морфизм) */
+        /* КАРТОЧКИ С УГЛОВЫМИ СЕЧЕНИЯМИ */
         .hero-card {
             background: var(--card-bg); border: 1px solid var(--border-color);
-            border-top: 4px solid var(--accent-color); border-radius: 8px;
+            border-top: 4px solid var(--accent-red); border-radius: 4px;
             padding: 40px; max-width: 1100px; width: 100%; text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.7), inset 0 0 20px rgba(255,255,255,0.02);
-            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 0 30px rgba(255, 30, 60, 0.03);
+            backdrop-filter: blur(16px); position: relative;
         }
         
-        h1 { font-family: 'Rajdhani', sans-serif; margin-top: 0; color: #fff; font-size: 32px; text-transform: uppercase; letter-spacing: 1px; }
-        .subtitle { font-family: 'Rajdhani', sans-serif; font-size: 14px; color: var(--accent-color); font-weight: 700; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;}
-        p { color: var(--text-muted); line-height: 1.6; font-size: 14px; }
+        /* Тактические уголки карточек */
+        .hero-card::before {
+            content: ''; position: absolute; top: -1px; right: -1px; width: 15px; height: 15px;
+            border-top: 2px solid var(--accent-red); border-right: 2px solid var(--accent-red);
+        }
+
+        h1 { font-family: 'Rajdhani', sans-serif; margin-top: 0; color: #fff; font-size: 34px; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        .subtitle { font-family: 'Rajdhani', sans-serif; font-size: 13px; color: var(--accent-red); font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 8px var(--accent-glow); }
+        p { color: var(--text-muted); line-height: 1.6; font-size: 13px; }
         
-        /* КНОПКИ */
+        /* ТАКТИЧЕСКИЕ КНОПКИ */
         .btn {
-            background: linear-gradient(135deg, #1e293b, #0f172a); color: white; border: 1px solid var(--border-color);
-            padding: 12px 24px; font-size: 13px; font-weight: 600; border-radius: 4px; letter-spacing: 1px;
+            background: linear-gradient(135deg, #121824, #080c14); color: white; border: 1px solid var(--border-color);
+            padding: 14px 28px; font-size: 12px; font-weight: 700; border-radius: 2px; letter-spacing: 2px;
             cursor: pointer; text-transform: uppercase; transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center;
+            font-family: 'JetBrains Mono', monospace; position: relative; overflow: hidden;
         }
-        .btn:hover:not(:disabled) { box-shadow: 0 0 15px rgba(255,255,255,0.1); transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-danger { background: linear-gradient(135deg, #b91c1c, #7f1d1d); border-color: #f87171; }
-        .btn-danger:hover:not(:disabled) { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-        .btn-success { background: linear-gradient(135deg, #059669, #064e3b); border-color: #34d399; }
-        .btn-success:hover:not(:disabled) { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
-        .btn-blue { background: linear-gradient(135deg, #2563eb, #1e3a8a); border-color: #60a5fa; }
-        .btn-blue:hover:not(:disabled) { box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
-        .btn-warn { background: linear-gradient(135deg, #d97706, #78350f); border-color: #fbbf24; }
+        .btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); transition: 0.5s;
+        }
+        .btn:hover::before { left: 100%; }
+        .btn:hover:not(:disabled) { box-shadow: 0 0 20px rgba(255, 30, 60, 0.3); transform: translateY(-2px); border-color: var(--accent-red); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
         
+        .btn-danger { background: linear-gradient(135deg, #7f1d1d, #450a0a); border-color: #ef4444; color: #fca5a5; }
+        .btn-danger:hover:not(:disabled) { box-shadow: 0 0 25px rgba(239, 68, 68, 0.6); border-color: #ef4444; }
+        
+        .btn-success { background: linear-gradient(135deg, #064e3b, #022c22); border-color: #10b981; color: #6ee7b7; }
+        .btn-success:hover:not(:disabled) { box-shadow: 0 0 25px rgba(16, 185, 129, 0.6); border-color: #10b981; }
+        
+        .btn-blue { background: linear-gradient(135deg, #1e3a8a, #0f172a); border-color: var(--accent-blue); color: var(--accent-blue); }
+        .btn-blue:hover:not(:disabled) { box-shadow: 0 0 25px var(--accent-blue-glow); border-color: var(--accent-blue); color: #fff; }
+        
+        .btn-warn { background: linear-gradient(135deg, #78350f, #451a03); border-color: #f59e0b; color: #fde68a; }
+
         /* МОДАЛЬНЫЕ ОКНА */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            background: rgba(3, 5, 8, 0.9); backdrop-filter: blur(8px);
             justify-content: center; align-items: center; z-index: 1000;
-            opacity: 0; visibility: hidden; transition: all 0.3s ease; display: flex;
+            opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex;
             padding: 15px;
         }
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-card {
-            background: var(--card-bg); border: 1px solid var(--border-color); border-top: 4px solid #3b82f6;
-            padding: 35px; border-radius: 8px; width: 100%; max-width: 600px; position: relative; text-align: left;
-            transform: scale(0.95) translateY(-20px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;
+            background: var(--card-bg); border: 1px solid var(--border-color); border-top: 4px solid var(--accent-blue);
+            padding: 35px; border-radius: 4px; width: 100%; max-width: 600px; position: relative; text-align: left;
+            transform: scale(0.9) translateY(-20px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 30px var(--accent-blue-glow); max-height: 90vh; overflow-y: auto;
         }
         .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
         
         /* ФОРМЫ */
-        .form-group { margin-bottom: 18px; }
-        .form-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; font-weight: 700; letter-spacing: 2px; }
         .form-group input, .form-group select, .form-group textarea {
-            width: 100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color);
-            color: #fff; border-radius: 6px; font-size: 14px; transition: all 0.3s; outline: none; font-family: inherit;
+            width: 100%; padding: 14px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; border-radius: 2px; font-size: 13px; transition: all 0.3s; outline: none; font-family: inherit;
         }
         .form-group textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.2); background: rgba(0,0,0,0.6); }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
+            border-color: var(--accent-blue); box-shadow: 0 0 15px var(--accent-blue-glow); background: rgba(0,0,0,0.8); 
+        }
         
-        .close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s; }
-        .close-btn:hover { color: #fff; }
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: var(--text-muted); font-size: 26px; cursor: pointer; transition: color 0.2s; }
+        .close-btn:hover { color: var(--accent-red); text-shadow: 0 0 10px var(--accent-red); }
         
         /* ПОИСК */
-        .search-container { margin-bottom: 20px; }
-        .search-container input { width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 14px; outline: none; }
-        .search-container input:focus { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.2); }
+        .search-container { margin-bottom: 25px; }
+        .search-container input { 
+            width: 100%; padding: 14px 20px; background: rgba(0,0,0,0.7); border: 1px solid var(--border-blue); border-radius: 2px; 
+            color: #fff; font-size: 13px; outline: none; font-family: inherit; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .search-container input:focus { border-color: var(--accent-blue); box-shadow: 0 0 20px var(--accent-blue-glow); }
 
         /* ТАБЛИЦЫ */
         .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; text-align: left; min-width: 700px; }
-        th, td { padding: 16px 12px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
-        th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: 600; letter-spacing: 1px; background: rgba(0,0,0,0.2); }
-        tr { transition: background 0.2s; }
-        tr:hover { background: rgba(255,255,255,0.03); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; text-align: left; min-width: 750px; }
+        th, td { padding: 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
+        th { color: var(--text-muted); text-transform: uppercase; font-size: 10px; font-weight: 700; letter-spacing: 2px; background: rgba(0,0,0,0.4); border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 2px solid var(--border-color); }
+        tr { transition: all 0.2s; }
+        tr:hover { background: rgba(255, 30, 60, 0.04); box-shadow: inset 2px 0 0 var(--accent-red); }
 
         /* БЕЙДЖИ СТАТУСОВ */
-        .badge { padding: 6px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-block; border: 1px solid transparent; }
-        .badge-pending { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
-        .badge-approved { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
-        .badge-rejected { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+        .badge { padding: 6px 12px; border-radius: 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; display: inline-block; border: 1px solid transparent; }
+        .badge-pending { background: rgba(255, 183, 0, 0.1); color: #ffb700; border-color: rgba(255, 183, 0, 0.3); box-shadow: 0 0 10px rgba(255, 183, 0, 0.1); }
+        .badge-approved { background: rgba(0, 255, 102, 0.1); color: #00ff66; border-color: rgba(0, 255, 102, 0.3); box-shadow: 0 0 10px rgba(0, 255, 102, 0.1); }
+        .badge-rejected { background: rgba(255, 30, 60, 0.1); color: #ff1e3c; border-color: rgba(255, 30, 60, 0.3); box-shadow: 0 0 10px var(--accent-glow); }
 
         .pre-wrap { white-space: pre-wrap; word-wrap: break-word; }
         .hidden { display: none !important; }
-        .fade-in { animation: fadeIn 0.5s ease forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* МОБИЛЬНАЯ АДАПТАЦИЯ (MEDIA QUERIES) */
+        /* СТАТУС БАР ВНИЗУ */
+        .terminal-status-bar {
+            background: rgba(3, 5, 8, 0.98); border-top: 1px solid rgba(255,255,255,0.08); padding: 8px 30px;
+            font-size: 10px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; letter-spacing: 1px;
+            text-transform: uppercase; margin-top: auto;
+        }
+        .status-indicator { display: flex; align-items: center; gap: 8px; }
+        .live-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; box-shadow: 0 0 6px var(--success); }
+
+        /* МОБИЛЬНАЯ АДАПТАЦИЯ */
         @media (max-width: 768px) {
-            header { padding: 12px 15px; flex-direction: column; gap: 10px; }
+            header { padding: 12px 15px; flex-direction: column; gap: 12px; }
             nav { width: 100%; justify-content: center; gap: 15px; flex-wrap: wrap; }
-            nav a { margin-left: 0; font-size: 11px; }
+            nav a { font-size: 10px; }
             main { padding: 15px 10px; }
             .hero-card { padding: 20px 15px; }
             h1 { font-size: 24px; }
             .modal-card { padding: 20px 15px; }
-            .form-group input, .form-group select, .form-group textarea { font-size: 16px; } /* Предотвращает зум на iOS */
+            .form-group input, .form-group select, .form-group textarea { font-size: 16px; }
+            .terminal-status-bar { flex-direction: column; gap: 5px; text-align: center; padding: 8px 10px; }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">🛡️ SANG <span>// MP TERMINAL</span></div>
+        <div class="logo">
+            <div class="logo-dot"></div>
+            🛡️ SANG <span>// MP TERMINAL</span>
+        </div>
         <nav>
             <a id="nav-home" class="active">Главная</a>
             <a id="nav-reports" class="hidden">Реестр рапортов</a>
-            <a id="nav-auth-btn" style="color: var(--accent-color);">Авторизация</a>
+            <a id="nav-auth-btn" style="color: var(--accent-red);">Авторизация</a>
         </nav>
     </header>
 
     <main>
         <!-- ПУБЛИЧНЫЙ ЭКРАН -->
         <div class="hero-card fade-in" id="hero-welcome">
-            <div class="subtitle">Secure Network SANG</div>
+            <div class="subtitle">Secure Network // Military Police Division</div>
             <h1>Подача рапорта о нарушении</h1>
-            <p style="margin-bottom: 30px;">Система автоматизированной обработки правонарушений военнослужащих.</p>
-            <button class="btn btn-blue" style="font-size: 15px; padding: 14px 30px;" onclick="openModal('report-modal')">📄 Инициировать рапорт</button>
+            <p style="margin-bottom: 35px;">Автоматизированный терминал фиксации правонарушений и контроля дисциплины личного состава.</p>
+            <button class="btn btn-blue" style="font-size: 14px; padding: 16px 36px;" onclick="openModal('report-modal')">📄 Инициировать рапорт</button>
         </div>
 
         <!-- ЛИЧНЫЙ КАБИНЕТ -->
         <div class="hero-card hidden" id="dashboard-panel" style="text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
                 <div>
-                    <div class="subtitle">Профиль офицера</div>
+                    <div class="subtitle">Идентификация офицера</div>
                     <h1 id="profile-name" style="word-break: break-word;">Загрузка...</h1>
-                    <p style="margin-top: 10px; font-size: 15px; line-height: 1.8;">
-                        <span style="color:#60a5fa">ID:</span> <strong id="profile-static">-</strong> &nbsp;|&nbsp; 
-                        <span style="color:#60a5fa">Звание:</span> <strong id="profile-rank">-</strong> &nbsp;|&nbsp; 
-                        <span style="color:#60a5fa">Позывной:</span> <strong id="profile-callsign">-</strong>
+                    <p style="margin-top: 12px; font-size: 14px; line-height: 1.8;">
+                        <span style="color:var(--accent-blue)">ID:</span> <strong id="profile-static" style="color:#fff">-</strong> &nbsp;|&nbsp; 
+                        <span style="color:var(--accent-blue)">Звание:</span> <strong id="profile-rank" style="color:#fff">-</strong> &nbsp;|&nbsp; 
+                        <span style="color:var(--accent-blue)">Позывной:</span> <strong id="profile-callsign" style="color:#fff">-</strong>
                     </p>
                 </div>
-                <button class="btn" id="logout-btn">Завершить сеанс</button>
+                <button class="btn btn-danger" id="logout-btn">Завершить сеанс</button>
             </div>
             
-            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
             
-            <h3 style="margin-top: 0; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Доступные модули</h3>
+            <h3 style="margin-top: 0; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Доступные модули</h3>
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                 <button class="btn btn-blue" onclick="switchPanel('reports-panel'); loadReports();">Доступ к базе рапортов</button>
             </div>
@@ -179,7 +251,7 @@
 
         <!-- РЕЕСТР РАПОРТОВ -->
         <div class="hero-card hidden" id="reports-panel" style="text-align: left; max-width: 1400px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
                 <div>
                     <div class="subtitle">База данных Military Police</div>
                     <h1 style="font-size: 24px; margin-bottom: 0;">Модерация и контроль</h1>
@@ -210,9 +282,18 @@
         </div>
     </main>
 
+    <!-- ТАКТИЧЕСКИЙ СТАТУС БАР -->
+    <div class="terminal-status-bar">
+        <div class="status-indicator">
+            <div class="live-dot"></div>
+            <span>Связь с сервером Supabase: Активна [SECURE]</span>
+        </div>
+        <div>SANG MP // v4.2 PROD</div>
+    </div>
+
     <!-- МОДАЛКА ВХОДА -->
     <div class="modal-overlay" id="auth-modal">
-        <div class="modal-card" style="border-top-color: var(--accent-color);">
+        <div class="modal-card" style="border-top-color: var(--accent-red);">
             <button class="close-btn" onclick="closeModal('auth-modal')">&times;</button>
             <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;">Авторизация MP</h2>
             <form id="auth-form">
@@ -220,7 +301,7 @@
                 <div class="form-group"><label>Пароль доступа</label><input type="password" id="login-password" required></div>
                 <button type="submit" class="btn btn-danger" id="login-submit-btn" style="width: 100%; margin-top: 10px;">Подключиться к БД</button>
             </form>
-            <div id="status-msg" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
+            <div id="status-msg" style="margin-top: 15px; font-size: 12px; text-align: center;"></div>
         </div>
     </div>
 
@@ -236,7 +317,7 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group"><label>Ваш Discord ID</label><input type="text" id="author-discord-id"></div>
-                    <div class="form-group"><label style="color: #f87171;">Статик нарушителя</label><input type="text" id="violator-static" required></div>
+                    <div class="form-group"><label style="color: var(--accent-red);">Статик нарушителя</label><input type="text" id="violator-static" required></div>
                 </div>
                 <div class="form-group">
                     <label>Статья нарушения</label>
@@ -258,7 +339,7 @@
                 </div>
                 <button type="submit" class="btn btn-blue" id="report-submit-btn" style="width: 100%; margin-top: 10px;">Зафиксировать рапорт</button>
             </form>
-            <div id="report-status-msg" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
+            <div id="report-status-msg" style="margin-top: 15px; font-size: 12px; text-align: center;"></div>
         </div>
     </div>
 
@@ -278,9 +359,8 @@
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUserData = null;
-        let allLoadedReports = []; // Хранилище для быстрого интерактивного поиска
+        let allLoadedReports = [];
 
-        // UI Навигация
         function switchPanel(panelId) {
             ['hero-welcome', 'dashboard-panel', 'reports-panel'].forEach(id => {
                 const el = document.getElementById(id);
@@ -299,7 +379,6 @@
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
 
-        // АВТОРИЗАЦИЯ
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-submit-btn'); const msg = document.getElementById('status-msg');
@@ -309,15 +388,14 @@
                 password: document.getElementById('login-password').value
             });
             if (error) { 
-                msg.innerHTML = '❌ Ошибка доступа: ' + error.message; msg.style.color = '#f87171'; 
+                msg.innerHTML = '❌ Ошибка доступа: ' + error.message; msg.style.color = '#ff1e3c'; 
                 btn.disabled = false; btn.innerText = 'Подключиться к БД';
             } else { 
-                msg.innerHTML = '✅ Доступ разрешен'; msg.style.color = '#34d399'; 
+                msg.innerHTML = '✅ Доступ разрешен'; msg.style.color = '#00ff66'; 
                 setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 800); 
             }
         };
 
-        // ПРОФИЛЬ
         async function loadProfile(user) {
             const { data } = await supabaseClient.from('unit_roster').select('*').eq('id', user.id).single();
             if (data) {
@@ -338,7 +416,6 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // ПОДАЧА РАПОРТА (ВСЕ НОМЕНКЛАТУРЫ И РЕЦИДИВЫ КРОМЕ ОТКЛОНЕННЫХ)
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
@@ -352,7 +429,6 @@
             let desc = document.getElementById('report-desc').value.trim();
 
             try {
-                // 1. Считаем индекс рапорта автора
                 const { count: authorCount } = await supabaseClient
                     .from('reports')
                     .select('*', { count: 'exact', head: true })
@@ -361,7 +437,6 @@
                 const reportIndex = (authorCount || 0) + 1;
                 const nomenclature = `SANG-MP/REPORT-${authorStatic}/${reportIndex}`;
 
-                // 2. Ищем ВСЕ прошлые рецидивы нарушителя (исключая статус 'rejected')
                 const { data: pastViolations } = await supabaseClient
                     .from('reports')
                     .select('nomenclature, report_type, status, created_at')
@@ -372,7 +447,6 @@
                 let detailsToSave = desc;
                 
                 if (pastViolations && pastViolations.length > 0) {
-                    // Собираем список ВСЕХ прошлых номенклатур и нарушений (кроме отклонённых)
                     const historyList = pastViolations.map((v, idx) => 
                         `#${idx + 1}: [${v.nomenclature}] — ${v.report_type}`
                     ).join('\n');
@@ -381,7 +455,6 @@
                     detailsToSave = alertHeader + desc;
                 }
 
-                // 3. Отправляем в БД
                 const { error: dbError } = await supabaseClient.from('reports').insert([{
                     author_name: authorName, author_static: authorStatic,
                     author_discord_id: document.getElementById('author-discord-id').value.trim(),
@@ -392,7 +465,7 @@
 
                 if (dbError) throw dbError;
 
-                msg.innerHTML = '✅ Рапорт успешно зарегистрирован!'; msg.style.color = '#34d399'; 
+                msg.innerHTML = '✅ Рапорт успешно зарегистрирован!'; msg.style.color = '#00ff66'; 
                 setTimeout(() => { 
                     closeModal('report-modal'); btn.disabled = false; btn.innerText = 'Зафиксировать рапорт'; 
                     document.getElementById('report-form').reset(); 
@@ -400,12 +473,11 @@
                 }, 1500);
 
             } catch (err) {
-                msg.innerHTML = '❌ Ошибка БД: ' + err.message; msg.style.color = '#f87171';
+                msg.innerHTML = '❌ Ошибка БД: ' + err.message; msg.style.color = '#ff1e3c';
                 btn.disabled = false; btn.innerText = 'Зафиксировать рапорт';
             }
         };
 
-        // ЗАГРУЗКА РЕЕСТРА И РАБОТА С ПОИСКОМ
         async function loadReports() {
             const tbody = document.getElementById('reports-table-body');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Синхронизация с базой данных...</td></tr>';
@@ -413,7 +485,7 @@
             const { data: reports, error } = await supabaseClient.from('reports').select('*').order('created_at', { ascending: false });
 
             if (error || !reports) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: #f87171;">Ошибка загрузки базы данных</td></tr>'; return;
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: #ff1e3c;">Ошибка загрузки базы данных</td></tr>'; return;
             }
 
             allLoadedReports = reports;
@@ -468,24 +540,24 @@
                     `;
                 } else if (isRejected && isBoss) {
                     actionButtons = `
-                        <div style="font-size: 10px; color: #f87171; margin-bottom: 5px; word-break: break-word;">Отклонил: ${r.processed_by}</div>
+                        <div style="font-size: 10px; color: #ff1e3c; margin-bottom: 5px; word-break: break-word;">Отклонил: ${r.processed_by}</div>
                         <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${r.id}')">🔄 Пересмотр</button>
                     `;
                 } else {
-                    const colorInfo = isApproved ? '#34d399' : '#f87171';
+                    const colorInfo = isApproved ? '#00ff66' : '#ff1e3c';
                     const actionWord = isApproved ? 'Одобрил' : 'Отклонил';
                     actionButtons = `<small style="color:${colorInfo};"><b>${actionWord}:</b><br>${r.processed_by || 'Офицер'}</small>`;
                 }
 
                 return `<tr class="fade-in">
-                    <td><code style="color:#60a5fa; font-size:12px;">${r.nomenclature}</code><br><small style="color:var(--text-muted);">${dateStr}</small></td>
+                    <td><code style="color:var(--accent-blue); font-size:11px;">${r.nomenclature}</code><br><small style="color:var(--text-muted);">${dateStr}</small></td>
                     <td><b>${r.author_name}</b><br><small style="color:var(--text-muted);">ID: ${r.author_static}</small></td>
-                    <td><strong style="color:#f87171; font-size: 16px;">${r.violator_static}</strong></td>
+                    <td><strong style="color:var(--accent-red); font-size: 15px;">${r.violator_static}</strong></td>
                     <td>
-                        <strong style="color:#e2e8f0;">${r.report_type}</strong>
-                        <div class="pre-wrap" style="color:var(--text-muted); font-size: 12px; margin: 8px 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border-left: 2px solid var(--border-color);">${r.details}</div>
-                        ${isRejected && r.reject_reason ? `<div style="color:#f87171; font-size: 11px; margin-bottom: 5px;"><b>Причина отказа:</b> ${r.reject_reason}</div>` : ''}
-                        <a href="${r.evidence}" target="_blank" style="color:#60a5fa; font-size:11px; text-decoration: none; border-bottom: 1px solid #60a5fa;">📎 Материалы дела</a>
+                        <strong style="color:#fff;">${r.report_type}</strong>
+                        <div class="pre-wrap" style="color:var(--text-muted); font-size: 11px; margin: 8px 0; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 2px; border-left: 2px solid var(--accent-red);">${r.details}</div>
+                        ${isRejected && r.reject_reason ? `<div style="color:#ff1e3c; font-size: 11px; margin-bottom: 5px;"><b>Причина отказа:</b> ${r.reject_reason}</div>` : ''}
+                        <a href="${r.evidence}" target="_blank" style="color:var(--accent-blue); font-size:11px; text-decoration: none; border-bottom: 1px solid var(--accent-blue);">📎 Материалы дела</a>
                     </td>
                     <td>${statusBadge}</td>
                     <td>${actionButtons}</td>
