@@ -3,266 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SANG | Военная Полиция</title>
+    <title>SANG | Military Police Terminal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; }
         
         :root {
-            --bg-color: #0b0c10; --card-bg: #14161f; --accent-color: #b71c1c;
-            --accent-hover: #c62828; --text-main: #eceff1; --text-muted: #90a4ae; --border-color: #263238;
-            --success-color: #2e7d32; --danger-color: #c62828;
+            --bg-color: #07090f; --card-bg: rgba(16, 20, 31, 0.85); --accent-color: #d32f2f;
+            --accent-glow: rgba(211, 47, 47, 0.4); --text-main: #e2e8f0; --text-muted: #94a3b8; 
+            --border-color: rgba(255, 255, 255, 0.1); --success-color: #10b981; --warning-color: #f59e0b;
         }
+        
         body {
-            margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;
-            background-color: var(--bg-color); color: var(--text-main);
-            display: flex; flex-direction: column; min-height: 100vh; overflow-y: scroll;
+            margin: 0; padding: 0; font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top, #111827 0%, var(--bg-color) 100%);
+            color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh;
+            background-attachment: fixed;
         }
+
+        /* ТАКТИЧЕСКИЙ HEADER */
         header {
-            background-color: var(--card-bg); border-bottom: 2px solid var(--accent-color);
-            padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            background: rgba(10, 13, 20, 0.9); border-bottom: 1px solid var(--border-color);
+            padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px);
+            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
         }
-        .logo { font-weight: bold; font-size: 18px; letter-spacing: 1.5px; color: #fff; text-transform: uppercase; }
-        .logo span { color: var(--accent-color); }
+        .logo { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 2px; color: #fff; text-transform: uppercase; display: flex; align-items: center; gap: 10px;}
+        .logo span { color: var(--accent-color); text-shadow: 0 0 10px var(--accent-glow); }
         
-        nav a { color: var(--text-muted); text-decoration: none; margin-left: 20px; font-size: 14px; text-transform: uppercase; font-weight: 600; cursor: pointer; transition: color 0.2s; }
-        nav a:hover, nav a.active { color: #fff; }
+        nav a { color: var(--text-muted); text-decoration: none; margin-left: 25px; font-size: 13px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; cursor: pointer; transition: all 0.3s; }
+        nav a:hover, nav a.active { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
         
-        main { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        main { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 40px 20px; }
         
+        /* КАРТОЧКИ (Стеклянный морфизм) */
         .hero-card {
-            background-color: var(--card-bg); border: 1px solid var(--border-color);
-            border-top: 4px solid var(--accent-color); border-radius: 6px;
-            padding: 40px; max-width: 950px; width: 100%; text-align: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-top: 4px solid var(--accent-color); border-radius: 8px;
+            padding: 40px; max-width: 1100px; width: 100%; text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.7), inset 0 0 20px rgba(255,255,255,0.02);
+            backdrop-filter: blur(12px);
         }
         
-        h1 { margin-top: 0; color: #fff; font-size: 24px; text-transform: uppercase; }
-        .subtitle { font-size: 13px; color: var(--accent-color); font-weight: bold; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;}
-        p { color: var(--text-muted); line-height: 1.5; font-size: 14px; }
+        h1 { font-family: 'Rajdhani', sans-serif; margin-top: 0; color: #fff; font-size: 32px; text-transform: uppercase; letter-spacing: 1px; }
+        .subtitle { font-family: 'Rajdhani', sans-serif; font-size: 14px; color: var(--accent-color); font-weight: 700; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;}
+        p { color: var(--text-muted); line-height: 1.6; font-size: 14px; }
         
+        /* КНОПКИ */
         .btn {
-            background-color: var(--accent-color); color: white; border: none;
-            padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 4px;
-            cursor: pointer; text-transform: uppercase; transition: background 0.2s, transform 0.1s, opacity 0.2s;
+            background: linear-gradient(135deg, #1e293b, #0f172a); color: white; border: 1px solid var(--border-color);
+            padding: 12px 24px; font-size: 13px; font-weight: 600; border-radius: 4px; letter-spacing: 1px;
+            cursor: pointer; text-transform: uppercase; transition: all 0.3s;
         }
-        .btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
-        .btn:active:not(:disabled) { transform: translateY(1px); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-danger { background-color: var(--danger-color); }
-        .btn-success { background-color: var(--success-color); }
-        .btn-blue { background-color: #1976d2; }
+        .btn:hover:not(:disabled) { box-shadow: 0 0 15px rgba(255,255,255,0.1); transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-danger { background: linear-gradient(135deg, #b91c1c, #7f1d1d); border-color: #f87171; }
+        .btn-danger:hover:not(:disabled) { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+        .btn-success { background: linear-gradient(135deg, #059669, #064e3b); border-color: #34d399; }
+        .btn-success:hover:not(:disabled) { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+        .btn-blue { background: linear-gradient(135deg, #2563eb, #1e3a8a); border-color: #60a5fa; }
+        .btn-blue:hover:not(:disabled) { box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        .btn-warn { background: linear-gradient(135deg, #d97706, #78350f); border-color: #fbbf24; }
         
+        /* МОДАЛЬНЫЕ ОКНА */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; z-index: 1000;
-            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
-            display: flex;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            justify-content: center; align-items: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease; display: flex;
         }
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-card {
-            background: var(--card-bg); border-top: 4px solid var(--accent-color);
-            padding: 30px; border-radius: 6px; width: 100%; max-width: 550px; position: relative; text-align: left;
-            transform: scale(0.95) translateY(-10px); transition: transform 0.3s ease;
-            max-height: 90vh; overflow-y: auto;
+            background: var(--card-bg); border: 1px solid var(--border-color); border-top: 4px solid #3b82f6;
+            padding: 35px; border-radius: 8px; width: 100%; max-width: 600px; position: relative; text-align: left;
+            transform: scale(0.95) translateY(-20px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;
         }
         .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
         
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
+        /* ФОРМЫ */
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
         .form-group input, .form-group select, .form-group textarea {
-            width: 100%; padding: 10px; background: #0b0c10; border: 1px solid var(--border-color);
-            color: #fff; border-radius: 4px; font-size: 14px; transition: border-color 0.2s; outline: none; font-family: inherit;
+            width: 100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color);
+            color: #fff; border-radius: 6px; font-size: 14px; transition: all 0.3s; outline: none; font-family: inherit;
         }
-        .form-group textarea { resize: vertical; min-height: 80px; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent-color); }
-        .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; transition: color 0.2s; }
-        .close-btn:hover { color: #fff; }
-        .status-msg { margin-top: 15px; font-size: 13px; text-align: center; min-height: 18px; }
+        .form-group textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.2); background: rgba(0,0,0,0.6); }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; text-align: left; }
-        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-        th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; }
-        tr:hover td { background-color: rgba(255,255,255,0.02); }
+        .close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s; }
+        .close-btn:hover { color: #fff; }
+        
+        /* ТАБЛИЦЫ */
+        table { width: 100%; border-collapse: collapse; margin-top: 25px; font-size: 13px; text-align: left; }
+        th, td { padding: 16px 12px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+        th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: 600; letter-spacing: 1px; background: rgba(0,0,0,0.2); }
+        tr { transition: background 0.2s; }
+        tr:hover { background: rgba(255,255,255,0.03); }
 
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block; }
-        .badge-pending { background: #f57f17; color: #fff; }
-        .badge-approved { background: #2e7d32; color: #fff; }
+        /* БЕЙДЖИ СТАТУСОВ */
+        .badge { padding: 6px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-block; border: 1px solid transparent; }
+        .badge-pending { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+        .badge-approved { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+        .badge-rejected { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
 
+        .pre-wrap { white-space: pre-wrap; word-wrap: break-word; }
         .hidden { display: none !important; }
-        .fade-in { animation: fadeIn 0.4s ease forwards; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">🛡️ SANG <span>// Military Police</span></div>
+        <div class="logo">🛡️ SANG <span>// MP TERMINAL</span></div>
         <nav>
             <a id="nav-home" class="active">Главная</a>
             <a id="nav-reports" class="hidden">Реестр рапортов</a>
-            <a id="nav-roster" class="hidden">Личный состав</a>
-            <a id="nav-auth-btn" style="color: var(--accent-color);">Вход для MP</a>
+            <a id="nav-auth-btn" style="color: var(--accent-color);">Авторизация</a>
         </nav>
     </header>
 
     <main>
-        <!-- ПУБЛИЧНЫЙ ЭКРАН (ВИДЕН ВСЕМ) -->
+        <!-- ПУБЛИЧНЫЙ ЭКРАН -->
         <div class="hero-card fade-in" id="hero-welcome">
-            <div class="subtitle">Отдел Военной Полиции</div>
+            <div class="subtitle">Secure Network SANG</div>
             <h1>Подача рапорта о нарушении</h1>
-            <p>Портал приема обращений и рапортов о правонарушениях военнослужащих SANG.</p><br>
-            <button class="btn btn-blue" style="font-size: 15px; padding: 12px 25px;" onclick="openModal('report-modal')">📄 Подать рапорт</button>
+            <p style="margin-bottom: 30px;">Система автоматизированной обработки правонарушений военнослужащих.</p>
+            <button class="btn btn-blue" style="font-size: 15px; padding: 14px 30px;" onclick="openModal('report-modal')">📄 Инициировать рапорт</button>
         </div>
 
-        <!-- ЛИЧНЫЙ КАБИНЕТ ОФИЦЕРА MP -->
+        <!-- ЛИЧНЫЙ КАБИНЕТ -->
         <div class="hero-card hidden" id="dashboard-panel" style="text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                    <div class="subtitle">Кабинет офицера MP</div>
+                    <div class="subtitle">Профиль офицера</div>
                     <h1 id="profile-name">Загрузка...</h1>
-                    <p style="margin-top: 5px;">
-                        <strong>Статик:</strong> <span id="profile-static">-</span> | 
-                        <strong>Звание:</strong> <span id="profile-rank">-</span> | 
-                        <strong>Позывной:</strong> <span id="profile-callsign">-</span>
+                    <p style="margin-top: 10px; font-size: 15px;">
+                        <span style="color:#60a5fa">ID:</span> <strong id="profile-static">-</strong> &nbsp;|&nbsp; 
+                        <span style="color:#60a5fa">Звание:</span> <strong id="profile-rank">-</strong> &nbsp;|&nbsp; 
+                        <span style="color:#60a5fa">Позывной:</span> <strong id="profile-callsign">-</strong>
                     </p>
                 </div>
-                <button class="btn" id="logout-btn" style="background-color: #37474f;">Выйти</button>
+                <button class="btn" id="logout-btn">Завершить сеанс</button>
             </div>
             
-            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
             
-            <h3 style="margin-top: 0; color: var(--text-muted); font-size: 14px; text-transform: uppercase;">Панель управления</h3>
+            <h3 style="margin-top: 0; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Доступные модули</h3>
             <div style="display: flex; gap: 15px;">
-                <button class="btn btn-blue" onclick="switchPanel('reports-panel'); loadReports();">Перейти к модерации рапортов</button>
+                <button class="btn btn-blue" onclick="switchPanel('reports-panel'); loadReports();">Доступ к базе рапортов</button>
             </div>
         </div>
 
-        <!-- РЕЕСТР РАПОРТОВ (ТОЛЬКО ДЛЯ АВТОРИЗОВАННЫХ) -->
-        <div class="hero-card hidden" id="reports-panel" style="text-align: left;">
+        <!-- РЕЕСТР РАПОРТОВ -->
+        <div class="hero-card hidden" id="reports-panel" style="text-align: left; max-width: 1400px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <div class="subtitle">База данных MP</div>
-                    <h1>Модерация рапортов</h1>
+                    <div class="subtitle">База данных Military Police</div>
+                    <h1 style="font-size: 26px;">Модерация и контроль</h1>
                 </div>
-                <button class="btn btn-blue" onclick="openModal('report-modal')">+ Подать рапорт</button>
+                <button class="btn btn-blue" onclick="openModal('report-modal')">+ Новый рапорт</button>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Номенклатура / Дата</th>
-                        <th>Заявитель</th>
-                        <th>Нарушитель</th>
-                        <th>Суть нарушения</th>
-                        <th>Статус</th>
-                        <th>Действия / Проверил</th>
-                    </tr>
-                </thead>
-                <tbody id="reports-table-body"></tbody>
-            </table>
-        </div>
-
-        <!-- АДМИНКА (КАДРЫ MP) -->
-        <div class="hero-card hidden" id="admin-roster-panel" style="text-align: left;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div><div class="subtitle">Управление кадрами</div><h1 style="margin-bottom:0;">Личный состав MP</h1></div>
-                <button class="btn" onclick="openModal('create-user-modal')">+ Добавить бойца</button>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">Номенклатура / Дата</th>
+                            <th style="width: 15%;">Заявитель</th>
+                            <th style="width: 10%;">Нарушитель</th>
+                            <th style="width: 35%;">Суть нарушения</th>
+                            <th style="width: 10%;">Статус</th>
+                            <th style="width: 10%;">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-table-body"></tbody>
+                </table>
             </div>
-            <table>
-                <thead><tr><th>Статик</th><th>Имя (IC)</th><th>Звание</th><th>Позывной</th><th>Действие</th></tr></thead>
-                <tbody id="roster-table-body"></tbody>
-            </table>
         </div>
     </main>
 
-    <!-- Модалка входа для сотрудников -->
+    <!-- МОДАЛКА ВХОДА -->
     <div class="modal-overlay" id="auth-modal">
-        <div class="modal-card">
+        <div class="modal-card" style="border-top-color: var(--accent-color);">
             <button class="close-btn" onclick="closeModal('auth-modal')">&times;</button>
-            <h2>Вход для сотрудников MP</h2>
+            <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;">Авторизация MP</h2>
             <form id="auth-form">
-                <div class="form-group"><label>Логин (Email)</label><input type="text" id="login-static" placeholder="41042@sang.local" required></div>
-                <div class="form-group"><label>Пароль</label><input type="password" id="login-password" required></div>
-                <button type="submit" class="btn" id="login-submit-btn" style="width: 100%;">Войти</button>
+                <div class="form-group"><label>Служебный Email</label><input type="text" id="login-static" placeholder="officer@sang.local" required></div>
+                <div class="form-group"><label>Пароль доступа</label><input type="password" id="login-password" required></div>
+                <button type="submit" class="btn btn-danger" id="login-submit-btn" style="width: 100%; margin-top: 10px;">Подключиться к БД</button>
             </form>
-            <div class="status-msg" id="status-msg"></div>
+            <div id="status-msg" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
         </div>
     </div>
 
-    <!-- Модалка добавления офицера -->
-    <div class="modal-overlay" id="create-user-modal">
-        <div class="modal-card">
-            <button class="close-btn" onclick="closeModal('create-user-modal')">&times;</button>
-            <h2>Добавить сотрудника MP</h2>
-            <form id="create-user-form">
-                <div class="form-group"><label>Email</label><input type="text" id="new-email" required></div>
-                <div class="form-group"><label>Пароль (мин. 6 символов)</label><input type="text" id="new-password" required minlength="6"></div>
-                <div class="form-group"><label>Статический ID</label><input type="text" id="new-static" required></div>
-                <div class="form-group"><label>Имя (IC)</label><input type="text" id="new-fullname" required></div>
-                <div class="form-group"><label>Звание</label><select id="new-rank"><option>Рекрут MP</option><option>Офицер MP</option><option>Зам. Начальника MP</option><option>Начальник MP</option></select></div>
-                <div class="form-group"><label>Позывной</label><input type="text" id="new-callsign"></div>
-                <button type="submit" class="btn" id="create-submit-btn" style="width: 100%;">Создать</button>
-            </form>
-            <div class="status-msg" id="create-status-msg"></div>
-        </div>
-    </div>
-
-    <!-- МОДАЛКА ПУБЛИЧНОЙ ПОДАЧИ РАПОРТА -->
+    <!-- МОДАЛКА ПОДАЧИ РАПОРТА -->
     <div class="modal-overlay" id="report-modal">
-        <div class="modal-card" style="border-top-color: #1976d2;">
+        <div class="modal-card">
             <button class="close-btn" onclick="closeModal('report-modal')">&times;</button>
-            <h2>Подача рапорта о нарушении</h2>
+            <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;">Оформление рапорта</h2>
             <form id="report-form">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="form-group">
-                        <label>Ваше Имя Фамилия (IC)</label>
-                        <input type="text" id="author-name" placeholder="John Doe" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Ваш статический ID</label>
-                        <input type="text" id="author-static" placeholder="12345" required>
-                    </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group"><label>Ваше Имя (IC)</label><input type="text" id="author-name" required></div>
+                    <div class="form-group"><label>Ваш Статик</label><input type="text" id="author-static" required></div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group"><label>Ваш Discord ID</label><input type="text" id="author-discord-id"></div>
+                    <div class="form-group"><label style="color: #f87171;">Статик нарушителя</label><input type="text" id="violator-static" required></div>
                 </div>
                 <div class="form-group">
-                    <label>Ваш Discord ID (опционально)</label>
-                    <input type="text" id="author-discord-id" placeholder="Например: 358231200192330000">
-                </div>
-                <div class="form-group">
-                    <label>Статик нарушителя</label>
-                    <input type="text" id="violator-static" placeholder="Например: 55102" required>
-                </div>
-                <div class="form-group">
-                    <label>Суть нарушения</label>
+                    <label>Статья нарушения</label>
                     <select id="report-type">
                         <option value="1.1_ustav">Нарушение субординации (1.1 Устав)</option>
                         <option value="awol">Самовольное оставление части (AWOL)</option>
                         <option value="nepodch">Невыполнение приказа</option>
-                        <option value="mat_damage">Порча государственного имущества</option>
-                        <option value="Прочее">Прочее нарушение</option>
+                        <option value="mat_damage">Порча гос. имущества</option>
+                        <option value="Прочее">Иное нарушение</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Подробное описание ситуаций</label>
-                    <textarea id="report-desc" placeholder="Опишите детально, что произошло..." required></textarea>
+                    <label>Детали ситуации (Фабула)</label>
+                    <textarea id="report-desc" placeholder="Кратко и по делу..." required></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Доказательства (Ссылка)</label>
-                    <input type="text" id="report-proof" placeholder="https://imgur.com/... или YouTube" required>
+                    <label>Материалы (Доказательства)</label>
+                    <input type="text" id="report-proof" placeholder="URL видео/фото" required>
                 </div>
-                <button type="submit" class="btn btn-blue" id="report-submit-btn" style="width: 100%;">Отправить рапорт</button>
+                <button type="submit" class="btn btn-blue" id="report-submit-btn" style="width: 100%; margin-top: 10px;">Зафиксировать рапорт</button>
             </form>
-            <div class="status-msg" id="report-status-msg"></div>
+            <div id="report-status-msg" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
         </div>
     </div>
 
     <script>
-        // =========================================================
-        // НАСТРОЙКИ SUPABASE
-        // =========================================================
         const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
         
@@ -276,272 +250,216 @@
         };
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const supabaseCreator = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            auth: { storageKey: 'temp-creator-key', persistSession: false }
-        });
-
         let currentUserData = null;
 
+        // UI Навигация
         function switchPanel(panelId) {
-            ['hero-welcome', 'dashboard-panel', 'reports-panel', 'admin-roster-panel'].forEach(id => {
+            ['hero-welcome', 'dashboard-panel', 'reports-panel'].forEach(id => {
                 const el = document.getElementById(id);
-                el.classList.add('hidden');
-                el.classList.remove('fade-in');
+                el.classList.add('hidden'); el.classList.remove('fade-in');
             });
             const target = document.getElementById(panelId);
-            target.classList.remove('hidden');
-            setTimeout(() => target.classList.add('fade-in'), 10);
+            target.classList.remove('hidden'); setTimeout(() => target.classList.add('fade-in'), 10);
         }
 
         window.openModal = (id) => document.getElementById(id).classList.add('active');
         window.closeModal = (id) => {
             document.getElementById(id).classList.remove('active');
-            document.querySelectorAll('.status-msg').forEach(msg => msg.innerText = '');
+            document.querySelectorAll('#status-msg, #report-status-msg').forEach(msg => msg.innerText = '');
         }
 
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
-        document.getElementById('nav-home').onclick = () => {
-            switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
-        };
+        document.getElementById('nav-home').onclick = () => switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
 
-        // Вход сотрудника MP
+        // АВТОРИЗАЦИЯ
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('login-submit-btn');
-            const msg = document.getElementById('status-msg');
-            btn.disabled = true; btn.innerText = 'Проверка...'; msg.innerText = '';
-
+            const btn = document.getElementById('login-submit-btn'); const msg = document.getElementById('status-msg');
+            btn.disabled = true; btn.innerText = 'Подключение...';
             const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: document.getElementById('login-static').value.trim(), 
                 password: document.getElementById('login-password').value
             });
-
             if (error) { 
-                msg.innerText = 'Ошибка: ' + error.message; msg.style.color = '#ff5252'; 
-                btn.disabled = false; btn.innerText = 'Войти';
+                msg.innerHTML = '❌ Ошибка доступа: ' + error.message; msg.style.color = '#f87171'; 
+                btn.disabled = false; btn.innerText = 'Подключиться к БД';
             } else { 
-                msg.innerText = 'Успешно!'; msg.style.color = '#69f0ae'; 
-                setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 600); 
+                msg.innerHTML = '✅ Доступ разрешен'; msg.style.color = '#34d399'; 
+                setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 800); 
             }
         };
 
-        // Загрузка личного кабинета
+        // ПРОФИЛЬ
         async function loadProfile(user) {
             const { data } = await supabaseClient.from('unit_roster').select('*').eq('id', user.id).single();
             if (data) {
                 currentUserData = data;
                 switchPanel('dashboard-panel');
-                
                 document.getElementById('profile-name').innerText = data.full_name;
                 document.getElementById('profile-static').innerText = data.static;
                 document.getElementById('profile-rank').innerText = data.rank;
-                document.getElementById('profile-callsign').innerText = data.callsign || '-';
+                document.getElementById('profile-callsign').innerText = data.callsign || 'Н/Д';
                 
                 const authBtn = document.getElementById('nav-auth-btn');
-                authBtn.innerText = 'Кабинет'; authBtn.onclick = () => switchPanel('dashboard-panel');
-
-                document.getElementById('nav-reports').classList.remove('hidden');
-                document.getElementById('nav-reports').onclick = () => { switchPanel('reports-panel'); loadReports(); };
-
-                const isBoss = data.rank.includes('Начальник') || data.rank.includes('Зам');
-                if (isBoss) {
-                    const navRoster = document.getElementById('nav-roster');
-                    navRoster.classList.remove('hidden');
-                    navRoster.onclick = () => { switchPanel('admin-roster-panel'); loadRoster(); };
-                }
+                authBtn.innerText = 'Личный кабинет'; authBtn.onclick = () => switchPanel('dashboard-panel');
+                
+                const navReports = document.getElementById('nav-reports');
+                navReports.classList.remove('hidden');
+                navReports.onclick = () => { switchPanel('reports-panel'); loadReports(); };
             }
         }
+        document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // =========================================================
-        // ПУБЛИЧНАЯ ПОДАЧА РАПОРТА (ДОСТУПНА ВСЕМ)
-        // =========================================================
+        // ПОДАЧА РАПОРТА (С УЧЕТОМ НОМЕНКЛАТУРЫ И РЕЦИДИВОВ)
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('report-submit-btn');
-            const msg = document.getElementById('report-status-msg');
-            btn.disabled = true; btn.innerText = 'Отправка...'; msg.innerText = '';
+            const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
+            btn.disabled = true; btn.innerText = 'Обработка данных...';
 
             const authorName = document.getElementById('author-name').value.trim();
             const authorStatic = document.getElementById('author-static').value.trim();
-            const authorDiscordId = document.getElementById('author-discord-id').value.trim();
             const violatorStatic = document.getElementById('violator-static').value.trim();
             const rawType = document.getElementById('report-type').value;
             const niceReason = CONFIG.NOMENCLATURE_MAP[rawType] || rawType;
-            const desc = document.getElementById('report-desc').value.trim();
-            const proof = document.getElementById('report-proof').value.trim();
+            let desc = document.getElementById('report-desc').value.trim();
 
             try {
-                // Генерация уникальной номенклатуры
-                const randomNum = Math.floor(1000 + Math.random() * 9000);
-                const nomenclature = `SANG-MP/REPORT-${authorStatic}/${randomNum}`;
+                // 1. Считаем, какой это по счету рапорт от этого автора для Номенклатуры
+                const { count: authorCount, error: countErr } = await supabaseClient
+                    .from('reports')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('author_static', authorStatic);
+                
+                const reportIndex = (authorCount || 0) + 1;
+                const nomenclature = `SANG-MP/REPORT-${authorStatic}/${reportIndex}`;
 
-                // 1. Сохраняем рапорт в Supabase со статусом pending
+                // 2. Проверяем рецидив нарушителя (исключая отклоненные рапорты)
+                const { data: pastViolations } = await supabaseClient
+                    .from('reports')
+                    .select('nomenclature, report_type, status')
+                    .eq('violator_static', violatorStatic)
+                    .neq('status', 'rejected')
+                    .order('created_at', { ascending: false });
+
+                let detailsToSave = desc;
+                
+                // Если есть прошлые нарушения, красиво вшиваем инфу в начало описания
+                if (pastViolations && pastViolations.length > 0) {
+                    const lastV = pastViolations[0];
+                    const alertHeader = `[⚠️ СИСТЕМА: ОБНАРУЖЕН РЕЦИДИВ]\nВсего зафиксировано нарушений: ${pastViolations.length}\nПоследнее нарушение: ${lastV.nomenclature} (${lastV.report_type})\n========================================\n\nСуть текущего нарушения:\n`;
+                    detailsToSave = alertHeader + desc;
+                }
+
+                // 3. Отправляем в БД
                 const { error: dbError } = await supabaseClient.from('reports').insert([{
-                    author_name: authorName,
-                    author_static: authorStatic,
-                    author_discord_id: authorDiscordId,
-                    violator_static: violatorStatic,
-                    report_type: niceReason,
-                    details: desc,
-                    evidence: proof,
-                    nomenclature: nomenclature,
-                    status: 'pending'
+                    author_name: authorName, author_static: authorStatic,
+                    author_discord_id: document.getElementById('author-discord-id').value.trim(),
+                    violator_static: violatorStatic, report_type: niceReason,
+                    details: detailsToSave, evidence: document.getElementById('report-proof').value.trim(),
+                    nomenclature: nomenclature, status: 'pending'
                 }]);
 
                 if (dbError) throw dbError;
 
-                msg.innerText = 'Рапорт успешно отправлен на рассмотрение!'; msg.style.color = '#69f0ae'; 
+                msg.innerHTML = '✅ Рапорт успешно зарегистрирован!'; msg.style.color = '#34d399'; 
                 setTimeout(() => { 
-                    closeModal('report-modal'); 
-                    btn.disabled = false; btn.innerText = 'Отправить рапорт'; 
+                    closeModal('report-modal'); btn.disabled = false; btn.innerText = 'Зафиксировать рапорт'; 
                     document.getElementById('report-form').reset(); 
                     if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
-                }, 1200);
+                }, 1500);
 
             } catch (err) {
-                msg.innerText = 'Ошибка: ' + err.message; msg.style.color = '#ff5252';
-                btn.disabled = false; btn.innerText = 'Отправить рапорт';
+                msg.innerHTML = '❌ Ошибка БД: ' + err.message; msg.style.color = '#f87171';
+                btn.disabled = false; btn.innerText = 'Зафиксировать рапорт';
             }
         };
 
-        // =========================================================
-        // МОДЕРАЦИЯ РАПОРТОВ (ОДОБРЕНИЕ / ОТКЛОНЕНИЕ)
-        // =========================================================
+        // ТАБЛИЦА МОДЕРАЦИИ
         async function loadReports() {
             const tbody = document.getElementById('reports-table-body');
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Загрузка рапортов...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Синхронизация с базой данных...</td></tr>';
 
-            const { data: reports, error } = await supabaseClient
-                .from('reports')
-                .select('*')
-                .order('created_at', { ascending: false });
+            const { data: reports, error } = await supabaseClient.from('reports').select('*').order('created_at', { ascending: false });
 
             if (error || !reports || reports.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Рапортов пока нет</td></tr>'; return;
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">База данных пуста</td></tr>'; return;
             }
+
+            const isBoss = currentUserData && (currentUserData.rank.includes('Начальник') || currentUserData.rank.includes('Зам'));
 
             tbody.innerHTML = reports.map(r => {
                 const dateStr = new Date(r.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                 const isApproved = r.status === 'approved';
+                const isRejected = r.status === 'rejected';
 
-                let statusBadge = isApproved 
-                    ? `<span class="badge badge-approved">✅ Одобрен</span>` 
-                    : `<span class="badge badge-pending">🟡 На проверке</span>`;
+                let statusBadge = '';
+                if (isApproved) statusBadge = `<span class="badge badge-approved">✅ Одобрен</span>`;
+                else if (isRejected) statusBadge = `<span class="badge badge-rejected" title="${r.reject_reason || ''}">❌ Отклонен</span>`;
+                else statusBadge = `<span class="badge badge-pending">🟡 Ожидает</span>`;
 
                 let actionButtons = '';
-                if (!isApproved) {
+                if (!isApproved && !isRejected) {
+                    // Ожидает проверки
                     actionButtons = `
-                        <button class="btn btn-success" style="padding: 5px 10px; font-size: 11px; margin-right: 5px;" onclick="approveReport('${r.id}', '${r.nomenclature}')">✅ Одобрить</button>
-                        <button class="btn btn-danger" style="padding: 5px 10px; font-size: 11px;" onclick="rejectReport('${r.id}', '${r.nomenclature}')">❌ Отклонить</button>
+                        <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px; margin-right: 5px;" onclick="approveReport('${r.id}')" title="Одобрить">✓</button>
+                        <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="rejectReport('${r.id}')" title="Отклонить">✕</button>
+                    `;
+                } else if (isRejected && isBoss) {
+                    // Отклонен, но босс может пересмотреть
+                    actionButtons = `
+                        <div style="font-size: 10px; color: #f87171; margin-bottom: 5px;">Отклонил: ${r.processed_by}</div>
+                        <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${r.id}')">🔄 Пересмотр</button>
                     `;
                 } else {
-                    actionButtons = `<small style="color:#69f0ae;"><b>Проверил:</b><br>${r.processed_by || 'Офицер MP'}</small>`;
+                    // Одобрено (или отклонено и смотрит не босс)
+                    const colorInfo = isApproved ? '#34d399' : '#f87171';
+                    const actionWord = isApproved ? 'Одобрил' : 'Отклонил';
+                    actionButtons = `<small style="color:${colorInfo};"><b>${actionWord}:</b><br>${r.processed_by || 'Офицер'}</small>`;
                 }
 
                 return `<tr class="fade-in">
-                    <td><code>${r.nomenclature}</code><br><small style="color:var(--text-muted);">${dateStr}</small></td>
-                    <td><b>${r.author_name}</b><br><small>Статик: ${r.author_static}</small></td>
-                    <td><strong style="color:#ff5252;">${r.violator_static}</strong></td>
-                    <td><b>${r.report_type}</b><br><small style="color:var(--text-muted);">${r.details}</small><br><a href="${r.evidence}" target="_blank" style="color:#64b5f6; font-size:11px;">[Доказательства]</a></td>
+                    <td><code style="color:#60a5fa; font-size:12px;">${r.nomenclature}</code><br><small style="color:var(--text-muted);">${dateStr}</small></td>
+                    <td><b>${r.author_name}</b><br><small style="color:var(--text-muted);">ID: ${r.author_static}</small></td>
+                    <td><strong style="color:#f87171; font-size: 16px;">${r.violator_static}</strong></td>
+                    <td>
+                        <strong style="color:#e2e8f0;">${r.report_type}</strong>
+                        <div class="pre-wrap" style="color:var(--text-muted); font-size: 12px; margin: 8px 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border-left: 2px solid var(--border-color);">${r.details}</div>
+                        ${isRejected && r.reject_reason ? `<div style="color:#f87171; font-size: 11px; margin-bottom: 5px;"><b>Причина отказа:</b> ${r.reject_reason}</div>` : ''}
+                        <a href="${r.evidence}" target="_blank" style="color:#60a5fa; font-size:11px; text-decoration: none; border-bottom: 1px solid #60a5fa;">📎 Материалы дела</a>
+                    </td>
                     <td>${statusBadge}</td>
                     <td>${actionButtons}</td>
                 </tr>`;
             }).join('');
         }
 
-        // ОДОБРИТЬ РАПОРТ
-        window.approveReport = async (id, nomenclature) => {
-            if (!confirm(`Вы действительно хотите ОДОБРИТЬ рапорт ${nomenclature}?`)) return;
+        const getOfficerInfo = () => `${currentUserData.full_name} (${currentUserData.static})`;
 
-            const officerInfo = `${currentUserData.full_name} (${currentUserData.static})`;
-
-            // Обновляем статус в базе данных
-            const { error } = await supabaseClient
-                .from('reports')
-                .update({ 
-                    status: 'approved', 
-                    processed_by: officerInfo,
-                    processed_at: new Date().toISOString()
-                })
-                .eq('id', id);
-
-            if (error) { alert('Ошибка: ' + error.message); return; }
-
+        window.approveReport = async (id) => {
+            if (!confirm('Подтверждаете ОДОБРЕНИЕ рапорта?')) return;
+            await supabaseClient.from('reports').update({ 
+                status: 'approved', processed_by: getOfficerInfo(), processed_at: new Date().toISOString() 
+            }).eq('id', id);
             loadReports();
         };
 
-        // ОТКЛОНИТЬ И ПОЛНОСТЬЮ УДАЛИТЬ РАПОРТ
-        window.rejectReport = async (id, nomenclature) => {
-            const reason = prompt(`Отклонение рапорта ${nomenclature}.\nУкажите причину отклонения (внутренний лог):`);
-            if (reason === null) return; // Если нажали "Отмена"
-
-            // Удаляем из базы данных
-            const { error } = await supabaseClient.from('reports').delete().eq('id', id);
-            
-            if (error) { alert('Ошибка при удалении: ' + error.message); return; }
-
+        window.rejectReport = async (id) => {
+            const reason = prompt('Укажите причину ОТКЛОНЕНИЯ (обязательно):');
+            if (!reason) return;
+            await supabaseClient.from('reports').update({ 
+                status: 'rejected', reject_reason: reason, processed_by: getOfficerInfo(), processed_at: new Date().toISOString() 
+            }).eq('id', id);
             loadReports();
         };
 
-        // Логика Кадров
-        document.getElementById('create-user-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('create-submit-btn');
-            const msg = document.getElementById('create-status-msg');
-            btn.disabled = true; btn.innerText = 'Оформление...'; msg.innerText = '';
-
-            const email = document.getElementById('new-email').value.trim();
-            const password = document.getElementById('new-password').value;
-            const staticId = document.getElementById('new-static').value.trim();
-
-            const { data, error } = await supabaseCreator.auth.signUp({ email, password });
-            if (error) { 
-                msg.innerText = 'Ошибка Auth: ' + error.message; msg.style.color = '#ff5252'; 
-                btn.disabled = false; btn.innerText = 'Создать'; return; 
-            }
-
-            if (data.user) {
-                const { error: dbError } = await supabaseClient.from('unit_roster').insert([{
-                    id: data.user.id, static: staticId, full_name: document.getElementById('new-fullname').value,
-                    rank: document.getElementById('new-rank').value, callsign: document.getElementById('new-callsign').value, is_active: true
-                }]);
-                
-                if (dbError) {
-                    msg.innerText = 'Ошибка БД: статик уже занят!'; msg.style.color = '#ff5252'; 
-                    btn.disabled = false; btn.innerText = 'Создать'; return; 
-                }
-
-                msg.innerText = 'Боец добавлен!'; msg.style.color = '#69f0ae'; 
-                setTimeout(() => { 
-                    closeModal('create-user-modal'); loadRoster(); 
-                    btn.disabled = false; btn.innerText = 'Создать'; 
-                    document.getElementById('create-user-form').reset(); 
-                }, 1000);
-            }
+        window.reviewReport = async (id) => {
+            if (!confirm('Внимание: Вы открываете дело на пересмотр. Рапорт будет ОДОБРЕН. Продолжить?')) return;
+            await supabaseClient.from('reports').update({ 
+                status: 'approved', reject_reason: null, processed_by: getOfficerInfo() + ' (Пересмотр)', processed_at: new Date().toISOString() 
+            }).eq('id', id);
+            loadReports();
         };
 
-        async function loadRoster() {
-            const tbody = document.getElementById('roster-table-body');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Загрузка...</td></tr>';
-            const { data } = await supabaseClient.from('unit_roster').select('*').order('full_name', { ascending: true });
-            
-            if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Штат пуст</td></tr>'; return;
-            }
-            tbody.innerHTML = data.map(s => `<tr class="fade-in">
-                <td><code>${s.static}</code></td><td><strong>${s.full_name}</strong></td><td>${s.rank}</td><td>${s.callsign || '-'}</td>
-                <td><button class="btn btn-danger" style="padding: 6px 12px; font-size: 11px;" onclick="fire('${s.id}')">Уволить</button></td>
-            </tr>`).join('');
-        }
-
-        window.fire = async (id) => { 
-            if(confirm('Удалить бойца из базы кадров?')) { 
-                const { error } = await supabaseClient.from('unit_roster').delete().eq('id', id); 
-                if (error) alert('Ошибка: ' + error.message); else loadRoster();
-            } 
-        };
-        
-        document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
     </script>
 </body>
