@@ -228,9 +228,8 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Ваш Discord ID (для тега/уведомлений)</label>
-                    <input type="text" id="author-discord-id" placeholder="Например: 358231200192330000" required>
-                    <small style="color: var(--text-muted); font-size: 10px;">Включите режим разработчика в Discord -> ПКМ по себе -> Скопировать ID</small>
+                    <label>Ваш Discord ID (опционально)</label>
+                    <input type="text" id="author-discord-id" placeholder="Например: 358231200192330000">
                 </div>
                 <div class="form-group">
                     <label>Статик нарушителя</label>
@@ -262,18 +261,13 @@
 
     <script>
         // =========================================================
-        // НАСТРОЙКИ SUPABASE И ВЕБХУКОВ DISCORD
+        // НАСТРОЙКИ SUPABASE
         // =========================================================
         const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
         
         const CONFIG = {
-            //POST_URL: "https://discord.com/api/webhooks/1154785067957244074/O47_TrBPKD02RB97Os8C9DBxme2fuJkayCSX5xk9a4kO09vaUie9-L_s1lusqdc_d1Ia", // Канал куда приходят НОВЫЕ рапорты
-            //DECISION_WEBHOOK_URL: "https://discord.com/api/webhooks/1287120154903187456/1RvnWUlgzrUPm7Gsq-LmTSPPz4fNnbj_-wTyC7SGJQvs7RE8YsWLMjulbg1mkVJqIrvq", // Канал логов решений (одобрения/отклонения)
-            //USERNAME: "San Andreas National Guard", 
-            //AVATAR_URL: "https://cdn.discordapp.com/attachments/1154716269837303818/1548301468032041000/SANG.png",
-            //PING_ROLE_ID: "941408248894992414",
-           // NOMENCLATURE_MAP: {
+            NOMENCLATURE_MAP: {
                 "1.1_ustav": "Нарушение субординации (1.1 Устав)",
                 "awol": "Самовольное оставление части (AWOL)",
                 "nepodch": "Невыполнение приказа",
@@ -396,30 +390,6 @@
 
                 if (dbError) throw dbError;
 
-                // 2. Отправляем уведомление в основной Discord канал (тегаем автора и роль MP)
-                await fetch(CONFIG.POST_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: CONFIG.USERNAME,
-                        avatar_url: CONFIG.AVATAR_URL,
-                        content: `🔔 **Поступил новый рапорт на проверку!** <@&${CONFIG.PING_ROLE_ID}>\nЗаявитель: <@${authorDiscordId}>`,
-                        embeds: [{
-                            title: `📝 Рапорт: ${nomenclature}`,
-                            color: 16761035, // Желтый цвет (Ожидает)
-                            fields: [
-                                { name: "Заявитель", value: `${authorName} (Статик: ${authorStatic}) | <@${authorDiscordId}>`, inline: false },
-                                { name: "Статик нарушителя", value: violatorStatic, inline: true },
-                                { name: "Причина", value: niceReason, inline: true },
-                                { name: "Описание", value: desc, inline: false },
-                                { name: "Доказательства", value: proof, inline: false }
-                            ],
-                            footer: { text: "Статус: На рассмотрении Военной Полицией" },
-                            timestamp: new Date().toISOString()
-                        }]
-                    })
-                });
-
                 msg.innerText = 'Рапорт успешно отправлен на рассмотрение!'; msg.style.color = '#69f0ae'; 
                 setTimeout(() => { 
                     closeModal('report-modal'); 
@@ -461,8 +431,8 @@
                 let actionButtons = '';
                 if (!isApproved) {
                     actionButtons = `
-                        <button class="btn btn-success" style="padding: 5px 10px; font-size: 11px; margin-right: 5px;" onclick="approveReport('${r.id}', '${r.nomenclature}', '${r.author_discord_id}')">✅ Одобрить</button>
-                        <button class="btn btn-danger" style="padding: 5px 10px; font-size: 11px;" onclick="rejectReport('${r.id}', '${r.nomenclature}', '${r.author_discord_id}')">❌ Отклонить</button>
+                        <button class="btn btn-success" style="padding: 5px 10px; font-size: 11px; margin-right: 5px;" onclick="approveReport('${r.id}', '${r.nomenclature}')">✅ Одобрить</button>
+                        <button class="btn btn-danger" style="padding: 5px 10px; font-size: 11px;" onclick="rejectReport('${r.id}', '${r.nomenclature}')">❌ Отклонить</button>
                     `;
                 } else {
                     actionButtons = `<small style="color:#69f0ae;"><b>Проверил:</b><br>${r.processed_by || 'Офицер MP'}</small>`;
@@ -480,7 +450,7 @@
         }
 
         // ОДОБРИТЬ РАПОРТ
-        window.approveReport = async (id, nomenclature, discordId) => {
+        window.approveReport = async (id, nomenclature) => {
             if (!confirm(`Вы действительно хотите ОДОБРИТЬ рапорт ${nomenclature}?`)) return;
 
             const officerInfo = `${currentUserData.full_name} (${currentUserData.static})`;
@@ -497,62 +467,18 @@
 
             if (error) { alert('Ошибка: ' + error.message); return; }
 
-            // Уведомление в Discord канал
-            await fetch(CONFIG.DECISION_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: CONFIG.USERNAME,
-                    avatar_url: CONFIG.AVATAR_URL,
-                    content: `✅ **Рапорт ОДОБРЕН!** <@${discordId}>`,
-                    embeds: [{
-                        title: `🟢 Одобрен рапорт: ${nomenclature}`,
-                        color: 3060562, // Зеленый
-                        fields: [
-                            { name: "Заявитель", value: `<@${discordId}>`, inline: true },
-                            { name: "Проверил офицер", value: officerInfo, inline: true },
-                            { name: "Статус", value: "Принят к исполнению / Вынесено взыскание", inline: false }
-                        ],
-                        timestamp: new Date().toISOString()
-                    }]
-                })
-            });
-
             loadReports();
         };
 
-        // ОТКЛОНИТЬ И ПОЛНОСТЬУ УДАЛИТЬ РАПОРТ
-        window.rejectReport = async (id, nomenclature, discordId) => {
-            const reason = prompt(`Отклонение рапорта ${nomenclature}.\nУкажите причину отклонения:`);
-            if (!reason) return;
-
-            const officerInfo = `${currentUserData.full_name} (${currentUserData.static})`;
+        // ОТКЛОНИТЬ И ПОЛНОСТЬЮ УДАЛИТЬ РАПОРТ
+        window.rejectReport = async (id, nomenclature) => {
+            const reason = prompt(`Отклонение рапорта ${nomenclature}.\nУкажите причину отклонения (внутренний лог):`);
+            if (reason === null) return; // Если нажали "Отмена"
 
             // Удаляем из базы данных
             const { error } = await supabaseClient.from('reports').delete().eq('id', id);
             
             if (error) { alert('Ошибка при удалении: ' + error.message); return; }
-
-            // Уведомление в Discord канал о причинах отклонения
-            await fetch(CONFIG.DECISION_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: CONFIG.USERNAME,
-                    avatar_url: CONFIG.AVATAR_URL,
-                    content: `❌ **Рапорт ОТКЛОНЕН!** <@${discordId}>`,
-                    embeds: [{
-                        title: `🔴 Отклонен рапорт: ${nomenclature}`,
-                        color: 13000744, // Красный
-                        fields: [
-                            { name: "Заявитель", value: `<@${discordId}>`, inline: true },
-                            { name: "Отклонил офицер", value: officerInfo, inline: true },
-                            { name: "Причина отклонения", value: reason, inline: false }
-                        ],
-                        timestamp: new Date().toISOString()
-                    }]
-                })
-            });
 
             loadReports();
         };
