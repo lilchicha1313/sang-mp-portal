@@ -433,49 +433,31 @@
             }).join('');
         }
 
-        const getOfficerInfo = () => currentUserData ? `${currentUserData.full_name} (${currentUserData.static})` : 'Офицер MP';
+        const getOfficerInfo = () => `${currentUserData.full_name} (${currentUserData.static})`;
 
-        window.approveReport = async function(id) {
+        window.approveReport = async (id) => {
             if (!confirm('Подтверждаете ОДОБРЕНИЕ рапорта?')) return;
-            const { error } = await supabaseClient.from('reports').update({ 
-                status: 'approved', 
-                processed_by: getOfficerInfo(), 
-                processed_at: new Date().toISOString() 
+            await supabaseClient.from('reports').update({ 
+                status: 'approved', processed_by: getOfficerInfo(), processed_at: new Date().toISOString() 
             }).eq('id', id);
-
-            if (error) alert('Ошибка: ' + error.message);
-            else loadReports();
+            loadReports();
         };
 
-        window.rejectReport = async function(id) {
-            const reason = prompt('Укажите причину ОТКЛОНЕНИЯ рапорта:');
-            if (reason === null) return; 
-            if (!reason.trim()) {
-                alert('Причина отклонения обязательна для заполнения!');
-                return;
-            }
-            const { error } = await supabaseClient.from('reports').update({ 
-                status: 'rejected', 
-                reject_reason: reason.trim(), 
-                processed_by: getOfficerInfo(), 
-                processed_at: new Date().toISOString() 
+        window.rejectReport = async (id) => {
+            const reason = prompt('Укажите причину ОТКЛОНЕНИЯ (обязательно):');
+            if (!reason) return;
+            await supabaseClient.from('reports').update({ 
+                status: 'rejected', reject_reason: reason, processed_by: getOfficerInfo(), processed_at: new Date().toISOString() 
             }).eq('id', id);
-
-            if (error) alert('Ошибка: ' + error.message);
-            else loadReports();
+            loadReports();
         };
 
-        window.reviewReport = async function(id) {
+        window.reviewReport = async (id) => {
             if (!confirm('Внимание: Вы открываете дело на пересмотр. Рапорт будет ОДОБРЕН. Продолжить?')) return;
-            const { error } = await supabaseClient.from('reports').update({ 
-                status: 'approved', 
-                reject_reason: null, 
-                processed_by: getOfficerInfo() + ' (Пересмотр)', 
-                processed_at: new Date().toISOString() 
+            await supabaseClient.from('reports').update({ 
+                status: 'approved', reject_reason: null, processed_by: getOfficerInfo() + ' (Пересмотр)', processed_at: new Date().toISOString() 
             }).eq('id', id);
-
-            if (error) alert('Ошибка: ' + error.message);
-            else loadReports();
+            loadReports();
         };
 
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
