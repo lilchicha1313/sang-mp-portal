@@ -268,9 +268,11 @@
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
         
         const CONFIG = {
+            POST_URL: "https://discord.com/api/webhooks/1154785067957244074/O47_TrBPKD02RB97Os8C9DBxme2fuJkayCSX5xk9a4kO09vaUie9-L_s1lusqdc_d1Ia", // Канал куда приходят НОВЫЕ рапорты
             DECISION_WEBHOOK_URL: "https://discord.com/api/webhooks/1287120154903187456/1RvnWUlgzrUPm7Gsq-LmTSPPz4fNnbj_-wTyC7SGJQvs7RE8YsWLMjulbg1mkVJqIrvq", // Канал логов решений (одобрения/отклонения)
             USERNAME: "San Andreas National Guard", 
             AVATAR_URL: "https://cdn.discordapp.com/attachments/1154716269837303818/1548301468032041000/SANG.png",
+            PING_ROLE_ID: "941408248894992414",
             NOMENCLATURE_MAP: {
                 "1.1_ustav": "Нарушение субординации (1.1 Устав)",
                 "awol": "Самовольное оставление части (AWOL)",
@@ -379,7 +381,7 @@
                 const randomNum = Math.floor(1000 + Math.random() * 9000);
                 const nomenclature = `SANG-MP/REPORT-${authorStatic}/${randomNum}`;
 
-                // Сохраняем рапорт в Supabase. Вебхук в Discord отправится автоматически триггером БД!
+                // 1. Сохраняем рапорт в Supabase со статусом pending
                 const { error: dbError } = await supabaseClient.from('reports').insert([{
                     author_name: authorName,
                     author_static: authorStatic,
@@ -394,22 +396,41 @@
 
                 if (dbError) throw dbError;
 
-                msg.innerText = 'Рапорт успешно отправлен на рассмотрение!'; 
-                msg.style.color = '#69f0ae'; 
-                
+                // 2. Отправляем уведомление в основной Discord канал (тегаем автора и роль MP)
+                await fetch(CONFIG.POST_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: CONFIG.USERNAME,
+                        avatar_url: CONFIG.AVATAR_URL,
+                        content: `🔔 **Поступил новый рапорт на проверку!** <@&${CONFIG.PING_ROLE_ID}>\nЗаявитель: <@${authorDiscordId}>`,
+                        embeds: [{
+                            title: `📝 Рапорт: ${nomenclature}`,
+                            color: 16761035, // Желтый цвет (Ожидает)
+                            fields: [
+                                { name: "Заявитель", value: `${authorName} (Статик: ${authorStatic}) | <@${authorDiscordId}>`, inline: false },
+                                { name: "Статик нарушителя", value: violatorStatic, inline: true },
+                                { name: "Причина", value: niceReason, inline: true },
+                                { name: "Описание", value: desc, inline: false },
+                                { name: "Доказательства", value: proof, inline: false }
+                            ],
+                            footer: { text: "Статус: На рассмотрении Военной Полицией" },
+                            timestamp: new Date().toISOString()
+                        }]
+                    })
+                });
+
+                msg.innerText = 'Рапорт успешно отправлен на рассмотрение!'; msg.style.color = '#69f0ae'; 
                 setTimeout(() => { 
                     closeModal('report-modal'); 
-                    btn.disabled = false; 
-                    btn.innerText = 'Отправить рапорт'; 
+                    btn.disabled = false; btn.innerText = 'Отправить рапорт'; 
                     document.getElementById('report-form').reset(); 
                     if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
                 }, 1200);
 
             } catch (err) {
-                msg.innerText = 'Ошибка: ' + err.message; 
-                msg.style.color = '#ff5252';
-                btn.disabled = false; 
-                btn.innerText = 'Отправить рапорт';
+                msg.innerText = 'Ошибка: ' + err.message; msg.style.color = '#ff5252';
+                btn.disabled = false; btn.innerText = 'Отправить рапорт';
             }
         };
 
@@ -500,7 +521,7 @@
             loadReports();
         };
 
-        // ОТКЛОНИТЬ И ПОЛНОСТЬЮ УДАЛИТЬ РАПОРТ
+        // ОТКЛОНИТЬ И ПОЛНОСТЬУ УДАЛИТЬ РАПОРТ
         window.rejectReport = async (id, nomenclature, discordId) => {
             const reason = prompt(`Отклонение рапорта ${nomenclature}.\nУкажите причину отклонения:`);
             if (!reason) return;
