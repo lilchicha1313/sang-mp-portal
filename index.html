@@ -32,10 +32,11 @@
         .logo { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 2px; color: #fff; text-transform: uppercase; display: flex; align-items: center; gap: 10px;}
         .logo span { color: var(--accent-color); text-shadow: 0 0 10px var(--accent-glow); }
         
-        nav a { color: var(--text-muted); text-decoration: none; margin-left: 25px; font-size: 13px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; cursor: pointer; transition: all 0.3s; }
+        nav { display: flex; align-items: center; gap: 20px; }
+        nav a { color: var(--text-muted); text-decoration: none; font-size: 13px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; cursor: pointer; transition: all 0.3s; }
         nav a:hover, nav a.active { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
         
-        main { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 40px 20px; }
+        main { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 40px 20px; width: 100%; }
         
         /* КАРТОЧКИ (Стеклянный морфизм) */
         .hero-card {
@@ -54,7 +55,7 @@
         .btn {
             background: linear-gradient(135deg, #1e293b, #0f172a); color: white; border: 1px solid var(--border-color);
             padding: 12px 24px; font-size: 13px; font-weight: 600; border-radius: 4px; letter-spacing: 1px;
-            cursor: pointer; text-transform: uppercase; transition: all 0.3s;
+            cursor: pointer; text-transform: uppercase; transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center;
         }
         .btn:hover:not(:disabled) { box-shadow: 0 0 15px rgba(255,255,255,0.1); transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -72,6 +73,7 @@
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
             justify-content: center; align-items: center; z-index: 1000;
             opacity: 0; visibility: hidden; transition: all 0.3s ease; display: flex;
+            padding: 15px;
         }
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-card {
@@ -95,8 +97,14 @@
         .close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s; }
         .close-btn:hover { color: #fff; }
         
+        /* ПОИСК */
+        .search-container { margin-bottom: 20px; }
+        .search-container input { width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 14px; outline: none; }
+        .search-container input:focus { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.2); }
+
         /* ТАБЛИЦЫ */
-        table { width: 100%; border-collapse: collapse; margin-top: 25px; font-size: 13px; text-align: left; }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; text-align: left; min-width: 700px; }
         th, td { padding: 16px 12px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
         th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: 600; letter-spacing: 1px; background: rgba(0,0,0,0.2); }
         tr { transition: background 0.2s; }
@@ -112,6 +120,18 @@
         .hidden { display: none !important; }
         .fade-in { animation: fadeIn 0.5s ease forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* МОБИЛЬНАЯ АДАПТАЦИЯ (MEDIA QUERIES) */
+        @media (max-width: 768px) {
+            header { padding: 12px 15px; flex-direction: column; gap: 10px; }
+            nav { width: 100%; justify-content: center; gap: 15px; flex-wrap: wrap; }
+            nav a { margin-left: 0; font-size: 11px; }
+            main { padding: 15px 10px; }
+            .hero-card { padding: 20px 15px; }
+            h1 { font-size: 24px; }
+            .modal-card { padding: 20px 15px; }
+            .form-group input, .form-group select, .form-group textarea { font-size: 16px; } /* Предотвращает зум на iOS */
+        }
     </style>
 </head>
 <body>
@@ -136,11 +156,11 @@
 
         <!-- ЛИЧНЫЙ КАБИНЕТ -->
         <div class="hero-card hidden" id="dashboard-panel" style="text-align: left;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
                 <div>
                     <div class="subtitle">Профиль офицера</div>
-                    <h1 id="profile-name">Загрузка...</h1>
-                    <p style="margin-top: 10px; font-size: 15px;">
+                    <h1 id="profile-name" style="word-break: break-word;">Загрузка...</h1>
+                    <p style="margin-top: 10px; font-size: 15px; line-height: 1.8;">
                         <span style="color:#60a5fa">ID:</span> <strong id="profile-static">-</strong> &nbsp;|&nbsp; 
                         <span style="color:#60a5fa">Звание:</span> <strong id="profile-rank">-</strong> &nbsp;|&nbsp; 
                         <span style="color:#60a5fa">Позывной:</span> <strong id="profile-callsign">-</strong>
@@ -149,24 +169,30 @@
                 <button class="btn" id="logout-btn">Завершить сеанс</button>
             </div>
             
-            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
             
             <h3 style="margin-top: 0; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Доступные модули</h3>
-            <div style="display: flex; gap: 15px;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                 <button class="btn btn-blue" onclick="switchPanel('reports-panel'); loadReports();">Доступ к базе рапортов</button>
             </div>
         </div>
 
         <!-- РЕЕСТР РАПОРТОВ -->
         <div class="hero-card hidden" id="reports-panel" style="text-align: left; max-width: 1400px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                 <div>
                     <div class="subtitle">База данных Military Police</div>
-                    <h1 style="font-size: 26px;">Модерация и контроль</h1>
+                    <h1 style="font-size: 24px; margin-bottom: 0;">Модерация и контроль</h1>
                 </div>
                 <button class="btn btn-blue" onclick="openModal('report-modal')">+ Новый рапорт</button>
             </div>
-            <div style="overflow-x: auto;">
+
+            <!-- ИНТЕРАКТИВНЫЙ ПОИСК -->
+            <div class="search-container">
+                <input type="text" id="report-search-input" placeholder="🔍 Интерактивный поиск по номенклатуре, статикам или сути нарушения..." oninput="filterReports()">
+            </div>
+
+            <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
@@ -245,12 +271,14 @@
                 "1.1_ustav": "Нарушение субординации (1.1 Устав)",
                 "awol": "Самовольное оставление части (AWOL)",
                 "nepodch": "Невыполнение приказа",
-                "mat_damage": "Порча государственного имущества"
+                "mat_damage": "Порча государственного имущества",
+                "Прочее": "Иное нарушение"
             }
         };
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUserData = null;
+        let allLoadedReports = []; // Хранилище для быстрого интерактивного поиска
 
         // UI Навигация
         function switchPanel(panelId) {
@@ -310,7 +338,7 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // ПОДАЧА РАПОРТА (С УЧЕТОМ НОМЕНКЛАТУРЫ И РЕЦИДИВОВ)
+        // ПОДАЧА РАПОРТА (ВСЕ НОМЕНКЛАТУРЫ И РЕЦИДИВЫ КРОМЕ ОТКЛОНЕННЫХ)
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
@@ -324,8 +352,8 @@
             let desc = document.getElementById('report-desc').value.trim();
 
             try {
-                // 1. Считаем, какой это по счету рапорт от этого автора для Номенклатуры
-                const { count: authorCount, error: countErr } = await supabaseClient
+                // 1. Считаем индекс рапорта автора
+                const { count: authorCount } = await supabaseClient
                     .from('reports')
                     .select('*', { count: 'exact', head: true })
                     .eq('author_static', authorStatic);
@@ -333,20 +361,23 @@
                 const reportIndex = (authorCount || 0) + 1;
                 const nomenclature = `SANG-MP/REPORT-${authorStatic}/${reportIndex}`;
 
-                // 2. Проверяем рецидив нарушителя (исключая отклоненные рапорты)
+                // 2. Ищем ВСЕ прошлые рецидивы нарушителя (исключая статус 'rejected')
                 const { data: pastViolations } = await supabaseClient
                     .from('reports')
-                    .select('nomenclature, report_type, status')
+                    .select('nomenclature, report_type, status, created_at')
                     .eq('violator_static', violatorStatic)
                     .neq('status', 'rejected')
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: true });
 
                 let detailsToSave = desc;
                 
-                // Если есть прошлые нарушения, красиво вшиваем инфу в начало описания
                 if (pastViolations && pastViolations.length > 0) {
-                    const lastV = pastViolations[0];
-                    const alertHeader = `[⚠️ СИСТЕМА: ОБНАРУЖЕН РЕЦИДИВ]\nВсего зафиксировано нарушений: ${pastViolations.length}\nПоследнее нарушение: ${lastV.nomenclature} (${lastV.report_type})\n========================================\n\nСуть текущего нарушения:\n`;
+                    // Собираем список ВСЕХ прошлых номенклатур и нарушений (кроме отклонённых)
+                    const historyList = pastViolations.map((v, idx) => 
+                        `#${idx + 1}: [${v.nomenclature}] — ${v.report_type}`
+                    ).join('\n');
+
+                    const alertHeader = `[⚠️ СИСТЕМА: ИСТОРИЯ РЕЦИДИВОВ]\nВсего зафиксировано нарушений: ${pastViolations.length}\nСписок:\n${historyList}\n========================================\n\nСуть текущего нарушения:\n`;
                     detailsToSave = alertHeader + desc;
                 }
 
@@ -374,15 +405,45 @@
             }
         };
 
-        // ТАБЛИЦА МОДЕРАЦИИ
+        // ЗАГРУЗКА РЕЕСТРА И РАБОТА С ПОИСКОМ
         async function loadReports() {
             const tbody = document.getElementById('reports-table-body');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Синхронизация с базой данных...</td></tr>';
 
             const { data: reports, error } = await supabaseClient.from('reports').select('*').order('created_at', { ascending: false });
 
-            if (error || !reports || reports.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">База данных пуста</td></tr>'; return;
+            if (error || !reports) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: #f87171;">Ошибка загрузки базы данных</td></tr>'; return;
+            }
+
+            allLoadedReports = reports;
+            renderReportsTable(allLoadedReports);
+        }
+
+        function filterReports() {
+            const query = document.getElementById('report-search-input').value.toLowerCase().trim();
+            if (!query) {
+                renderReportsTable(allLoadedReports);
+                return;
+            }
+
+            const filtered = allLoadedReports.filter(r => 
+                (r.nomenclature && r.nomenclature.toLowerCase().includes(query)) ||
+                (r.violator_static && r.violator_static.toLowerCase().includes(query)) ||
+                (r.author_static && r.author_static.toLowerCase().includes(query)) ||
+                (r.author_name && r.author_name.toLowerCase().includes(query)) ||
+                (r.report_type && r.report_type.toLowerCase().includes(query)) ||
+                (r.details && r.details.toLowerCase().includes(query))
+            );
+
+            renderReportsTable(filtered);
+        }
+
+        function renderReportsTable(reports) {
+            const tbody = document.getElementById('reports-table-body');
+            if (reports.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Ничего не найдено</td></tr>'; 
+                return;
             }
 
             const isBoss = currentUserData && (currentUserData.rank.includes('Начальник') || currentUserData.rank.includes('Зам'));
@@ -399,19 +460,18 @@
 
                 let actionButtons = '';
                 if (!isApproved && !isRejected) {
-                    // Ожидает проверки
                     actionButtons = `
-                        <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px; margin-right: 5px;" onclick="approveReport('${r.id}')" title="Одобрить">✓</button>
-                        <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="rejectReport('${r.id}')" title="Отклонить">✕</button>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px;" onclick="approveReport('${r.id}')" title="Одобрить">✓</button>
+                            <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="rejectReport('${r.id}')" title="Отклонить">✕</button>
+                        </div>
                     `;
                 } else if (isRejected && isBoss) {
-                    // Отклонен, но босс может пересмотреть
                     actionButtons = `
-                        <div style="font-size: 10px; color: #f87171; margin-bottom: 5px;">Отклонил: ${r.processed_by}</div>
+                        <div style="font-size: 10px; color: #f87171; margin-bottom: 5px; word-break: break-word;">Отклонил: ${r.processed_by}</div>
                         <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${r.id}')">🔄 Пересмотр</button>
                     `;
                 } else {
-                    // Одобрено (или отклонено и смотрит не босс)
                     const colorInfo = isApproved ? '#34d399' : '#f87171';
                     const actionWord = isApproved ? 'Одобрил' : 'Отклонил';
                     actionButtons = `<small style="color:${colorInfo};"><b>${actionWord}:</b><br>${r.processed_by || 'Офицер'}</small>`;
