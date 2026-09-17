@@ -621,7 +621,7 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // ПОДАЧА РАПОРТА ЧЕРЕЗ GAS
+        // ПОДАЧА РАПОРТА ЧЕРЕЗ GAS (С БЕЗОПАСНЫМ ПАРСИНГОМ)
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
@@ -647,7 +647,14 @@
                     body: JSON.stringify(payload)
                 });
 
-                const resData = await response.json();
+                const rawText = await response.text();
+                let resData;
+                try {
+                    resData = JSON.parse(rawText);
+                } catch (parseErr) {
+                    console.error('Ответ сервера (не JSON):', rawText);
+                    throw new Error('Сервер вернул некорректный ответ (HTML вместо JSON). Проверьте доступ к Apps Script ("Кто имеет доступ: Все").');
+                }
 
                 if (resData.status === 'success') {
                     msg.innerHTML = `✅ Рапорт успешно зарегистрирован: <b>${resData.nomenclature}</b>`; 
@@ -765,7 +772,17 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                const result = await response.json();
+                
+                const rawText = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(rawText);
+                } catch (parseErr) {
+                    console.error('Ответ сервера (не JSON):', rawText);
+                    alert('Ошибка доступа к Google Apps Script. Убедитесь, что приложение развернуто с доступом "Все (Anyone)".');
+                    return false;
+                }
+
                 if (result.status === 'success') {
                     return true;
                 } else {
