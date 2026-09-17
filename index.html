@@ -723,14 +723,14 @@
                 if (!isApproved && !isRejected) {
                     actionButtons = `
                         <div style="display: flex; gap: 5px;">
-                            <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px;" onclick="approveReport('${r.id}')" title="Одобрить">✓</button>
-                            <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="rejectReport('${r.id}')" title="Отклонить">✕</button>
+                            <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px;" onclick="approveReport('${r.id}', '${r.discord_message_id || ''}')" title="Одобрить">✓</button>
+                            <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="rejectReport('${r.id}', '${r.discord_message_id || ''}')" title="Отклонить">✕</button>
                         </div>
                     `;
                 } else if (isRejected && isBoss) {
                     actionButtons = `
                         <div style="font-size: 10px; color: #f87171; margin-bottom: 5px; word-break: break-word;">Отклонил: ${r.processed_by}</div>
-                        <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${r.id}')">🔄 Пересмотр</button>
+                        <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${r.id}', '${r.discord_message_id || ''}')">🔄 Пересмотр</button>
                     `;
                 } else {
                     const colorInfo = isApproved ? '#34d399' : '#f87171';
@@ -779,12 +779,13 @@
             }
         }
 
-        window.approveReport = async (id) => {
+        window.approveReport = async (id, discordMsgId) => {
             if (!confirm('Подтверждаете ОДОБРЕНИЕ рапорта?')) return;
             
             const isOk = await sendStatusUpdateToGAS({
                 action: 'update_status',
                 id: id,
+                discord_message_id: discordMsgId,
                 status: 'approved',
                 processed_by: getOfficerInfo(),
                 reject_reason: ''
@@ -793,13 +794,14 @@
             if (isOk) loadReports();
         };
 
-        window.rejectReport = async (id) => {
+        window.rejectReport = async (id, discordMsgId) => {
             const reason = prompt('Укажите причину ОТКЛОНЕНИЯ (обязательно):');
             if (!reason) return;
 
             const isOk = await sendStatusUpdateToGAS({
                 action: 'update_status',
                 id: id,
+                discord_message_id: discordMsgId,
                 status: 'rejected',
                 processed_by: getOfficerInfo(),
                 reject_reason: reason
@@ -808,12 +810,13 @@
             if (isOk) loadReports();
         };
 
-        window.reviewReport = async (id) => {
+        window.reviewReport = async (id, discordMsgId) => {
             if (!confirm('Внимание: Вы открываете дело на пересмотр. Рапорт будет ОДОБРЕН. Продолжить?')) return;
 
             const isOk = await sendStatusUpdateToGAS({
                 action: 'update_status',
                 id: id,
+                discord_message_id: discordMsgId,
                 status: 'approved',
                 processed_by: getOfficerInfo() + ' (Пересмотр)',
                 reject_reason: ''
