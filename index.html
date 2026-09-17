@@ -621,7 +621,7 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // ПОДАЧА РАПОРТА ЧЕРЕЗ GAS (ОТПРАВКА ДАННЫХ И УВЕДОМЛЕНИЙ)
+        // ПОДАЧА РАПОРТА ЧЕРЕЗ GAS
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
@@ -754,31 +754,72 @@
             }).join('');
         }
 
-        const getOfficerInfo = () => `${currentUserData.full_name} (${currentUserData.static})`;
+        const getOfficerInfo = () => currentUserData ? `${currentUserData.full_name} (${currentUserData.static})` : 'Офицер MP';
+
+        // Вспомогательная функция отправки обновления статуса в Google Apps Script
+        async function sendStatusUpdateToGAS(payload) {
+            try {
+                const response = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    return true;
+                } else {
+                    alert('Ошибка обновления статуса: ' + (result.message || 'Неизвестная ошибка'));
+                    return false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Ошибка соединения с сервером Google Apps Script');
+                return false;
+            }
+        }
 
         window.approveReport = async (id) => {
             if (!confirm('Подтверждаете ОДОБРЕНИЕ рапорта?')) return;
-            await supabaseClient.from('reports').update({ 
-                status: 'approved', processed_by: getOfficerInfo(), processed_at: new Date().toISOString() 
-            }).eq('id', id);
-            loadReports();
+            
+            const isOk = await sendStatusUpdateToGAS({
+                action: 'update_status',
+                id: id,
+                status: 'approved',
+                processed_by: getOfficerInfo(),
+                reject_reason: ''
+            });
+
+            if (isOk) loadReports();
         };
 
         window.rejectReport = async (id) => {
             const reason = prompt('Укажите причину ОТКЛОНЕНИЯ (обязательно):');
             if (!reason) return;
-            await supabaseClient.from('reports').update({ 
-                status: 'rejected', reject_reason: reason, processed_by: getOfficerInfo(), processed_at: new Date().toISOString() 
-            }).eq('id', id);
-            loadReports();
+
+            const isOk = await sendStatusUpdateToGAS({
+                action: 'update_status',
+                id: id,
+                status: 'rejected',
+                processed_by: getOfficerInfo(),
+                reject_reason: reason
+            });
+
+            if (isOk) loadReports();
         };
 
         window.reviewReport = async (id) => {
             if (!confirm('Внимание: Вы открываете дело на пересмотр. Рапорт будет ОДОБРЕН. Продолжить?')) return;
-            await supabaseClient.from('reports').update({ 
-                status: 'approved', reject_reason: null, processed_by: getOfficerInfo() + ' (Пересмотр)', processed_at: new Date().toISOString() 
-            }).eq('id', id);
-            loadReports();
+
+            const isOk = await sendStatusUpdateToGAS({
+                action: 'update_status',
+                id: id,
+                status: 'approved',
+                processed_by: getOfficerInfo() + ' (Пересмотр)',
+                reject_reason: ''
+            });
+
+            if (isOk) loadReports();
         };
 
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
