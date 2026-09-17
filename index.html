@@ -22,7 +22,6 @@
             background-attachment: fixed;
         }
 
-        /* ТАКТИЧЕСКИЙ HEADER */
         header {
             background: rgba(10, 13, 20, 0.9); border-bottom: 1px solid var(--border-color);
             padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
@@ -38,7 +37,6 @@
         
         main { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 40px 20px; width: 100%; }
         
-        /* КАРТОЧКИ (Стеклянный морфизм) */
         .hero-card {
             background: var(--card-bg); border: 1px solid var(--border-color);
             border-top: 4px solid var(--accent-color); border-radius: 8px;
@@ -51,7 +49,6 @@
         .subtitle { font-family: 'Rajdhani', sans-serif; font-size: 14px; color: var(--accent-color); font-weight: 700; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;}
         p { color: var(--text-muted); line-height: 1.6; font-size: 14px; }
         
-        /* КНОПКИ */
         .btn {
             background: linear-gradient(135deg, #1e293b, #0f172a); color: white; border: 1px solid var(--border-color);
             padding: 12px 24px; font-size: 13px; font-weight: 600; border-radius: 4px; letter-spacing: 1px;
@@ -67,7 +64,6 @@
         .btn-blue:hover:not(:disabled) { box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
         .btn-warn { background: linear-gradient(135deg, #d97706, #78350f); border-color: #fbbf24; }
         
-        /* МОДАЛЬНЫЕ ОКНА */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
@@ -84,7 +80,6 @@
         }
         .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
         
-        /* ФОРМЫ */
         .form-group { margin-bottom: 18px; }
         .form-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
         .form-group input, .form-group select, .form-group textarea {
@@ -97,12 +92,10 @@
         .close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s; }
         .close-btn:hover { color: #fff; }
         
-        /* ПОИСК */
         .search-container { margin-bottom: 20px; }
         .search-container input { width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 14px; outline: none; }
         .search-container input:focus { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.2); }
 
-        /* ТАБЛИЦЫ */
         .table-responsive { width: 100%; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; text-align: left; min-width: 700px; }
         th, td { padding: 16px 12px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
@@ -110,7 +103,6 @@
         tr { transition: background 0.2s; }
         tr:hover { background: rgba(255,255,255,0.03); }
 
-        /* БЕЙДЖИ СТАТУСОВ */
         .badge { padding: 6px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-block; border: 1px solid transparent; }
         .badge-pending { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
         .badge-approved { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
@@ -121,7 +113,9 @@
         .fade-in { animation: fadeIn 0.5s ease forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* МОБИЛЬНАЯ АДАПТАЦИЯ (MEDIA QUERIES) */
+        /* QR-Код стили */
+        #mfa-qr-code svg { width: 180px; height: 180px; background: #fff; padding: 10px; border-radius: 8px; margin: 0 auto; display: block; }
+
         @media (max-width: 768px) {
             header { padding: 12px 15px; flex-direction: column; gap: 10px; }
             nav { width: 100%; justify-content: center; gap: 15px; flex-wrap: wrap; }
@@ -174,6 +168,7 @@
             <h3 style="margin-top: 0; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Доступные модули</h3>
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                 <button class="btn btn-blue" onclick="switchPanel('reports-panel'); loadReports();">Доступ к базе рапортов</button>
+                <button class="btn btn-warn" id="mfa-setup-btn" onclick="initMFAEnrollment()">🔐 Настроить 2FA (Google Auth)</button>
             </div>
         </div>
 
@@ -187,7 +182,6 @@
                 <button class="btn btn-blue" onclick="openModal('report-modal')">+ Новый рапорт</button>
             </div>
 
-            <!-- ИНТЕРАКТИВНЫЙ ПОИСК -->
             <div class="search-container">
                 <input type="text" id="report-search-input" placeholder="🔍 Интерактивный поиск по номенклатуре, статикам или сути нарушения..." oninput="filterReports()">
             </div>
@@ -210,17 +204,54 @@
         </div>
     </main>
 
-    <!-- МОДАЛКА ВХОДА -->
+    <!-- МОДАЛКА ВХОДА И 2FA ПРОВЕРКИ -->
     <div class="modal-overlay" id="auth-modal">
         <div class="modal-card" style="border-top-color: var(--accent-color);">
             <button class="close-btn" onclick="closeModal('auth-modal')">&times;</button>
-            <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;">Авторизация MP</h2>
+            <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;" id="auth-modal-title">Авторизация MP</h2>
+            
+            <!-- Шаг 1: Email и Пароль -->
             <form id="auth-form">
                 <div class="form-group"><label>Служебный Email</label><input type="text" id="login-static" placeholder="officer@sang.local" required></div>
                 <div class="form-group"><label>Пароль доступа</label><input type="password" id="login-password" required></div>
                 <button type="submit" class="btn btn-danger" id="login-submit-btn" style="width: 100%; margin-top: 10px;">Подключиться к БД</button>
             </form>
+
+            <!-- Шаг 2: Ввод 6-значного кода MFA -->
+            <form id="mfa-challenge-form" class="hidden">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+                    Введите 6-значный одноразовый код из приложения <strong>Google Authenticator</strong> на вашем телефоне.
+                </p>
+                <div class="form-group">
+                    <label>Код подтверждения (TOTP)</label>
+                    <input type="text" id="mfa-code-input" placeholder="000000" maxlength="6" style="font-size: 22px; letter-spacing: 5px; text-align: center;" required>
+                </div>
+                <button type="submit" class="btn btn-success" id="mfa-submit-btn" style="width: 100%; margin-top: 10px;">Подтвердить личность</button>
+            </form>
+
             <div id="status-msg" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА НАСТРОЙКИ 2FA (QR-КОД) -->
+    <div class="modal-overlay" id="mfa-setup-modal">
+        <div class="modal-card" style="border-top-color: #f59e0b; text-align: center;">
+            <button class="close-btn" onclick="closeModal('mfa-setup-modal')">&times;</button>
+            <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;">Привязка Google Authenticator</h2>
+            <p style="font-size: 13px; color: var(--text-muted);">Отсканируйте этот QR-код через приложение на смартфоне:</p>
+            
+            <div id="mfa-qr-code" style="margin: 20px 0;"></div>
+            
+            <p style="font-size: 11px; color: var(--text-muted);">Или введите ключ вручную: <code id="mfa-secret-key" style="color: #60a5fa; font-size: 13px;">-</code></p>
+
+            <form id="mfa-verify-enroll-form" style="margin-top: 20px; text-align: left;">
+                <div class="form-group">
+                    <label>Первый 6-значный код из приложения</label>
+                    <input type="text" id="mfa-enroll-code" placeholder="000000" maxlength="6" style="font-size: 18px; letter-spacing: 3px; text-align: center;" required>
+                </div>
+                <button type="submit" class="btn btn-success" id="mfa-enroll-submit-btn" style="width: 100%;">Активировать защиту</button>
+            </form>
+            <div id="mfa-setup-msg" style="margin-top: 15px; font-size: 13px;"></div>
         </div>
     </div>
 
@@ -241,7 +272,6 @@
                 <div class="form-group">
                     <label>Статья / Пункт устава</label>
                     <select id="report-type">
-                        <!-- РАЗДЕЛ II | Субординация и этика -->
                         <optgroup label="— РАЗДЕЛ II: Субординация и этика —">
                             <option value="2.1_zakon">2.1. Незнание/несоблюдение Уголовного, Административного или Этического кодекса</option>
                             <option value="2.2_sub">2.2. Нарушение правил субординации при устном общении</option>
@@ -255,8 +285,6 @@
                             <option value="2.11_civil_ty">2.11. Общение с гражданскими и госслужащими на «Ты» / Хамство</option>
                             <option value="2.12_report">2.12. Отсутствие еженедельного отчета о проделанной работе</option>
                         </optgroup>
-
-                        <!-- РАЗДЕЛ IV | Запреты: Движение и транспорт -->
                         <optgroup label="— РАЗДЕЛ IV: Движение и транспорт —">
                             <option value="4.2_vvp">4.2. Перемещение по ВПП не перпендикулярно</option>
                             <option value="4.13_tech_misuse">4.13. Использование служебной техники не по назначению</option>
@@ -273,8 +301,6 @@
                             <option value="4.45_column_route">4.45. Отклонение от маршрута ведущей колонну техники</option>
                             <option value="4.52_flight_access">4.52. Использование летной техники без соответствующего доступа</option>
                         </optgroup>
-
-                        <!-- РАЗДЕЛ IV | Запреты: Служебная дисциплина и посты -->
                         <optgroup label="— РАЗДЕЛ IV: Служебная дисциплина и посты —">
                             <option value="4.12_post_leave">4.12. Самовольный уход с поста или места службы без доклада</option>
                             <option value="4.16_unauth_pass">4.16. Пропуск на территорию ФЗ лиц без доступа</option>
@@ -292,8 +318,6 @@
                             <option value="4.54_penalties">4.54. Незаконная выдача взысканий другим отделам</option>
                             <option value="4.55_interfere_dept">4.55. Вмешательство в работу других отделов</option>
                         </optgroup>
-
-                        <!-- РАЗДЕЛ IV | Запреты: Внутренний порядок и поведение -->
                         <optgroup label="— РАЗДЕЛ IV: Внутренний порядок и поведение —">
                             <option value="4.3_ethics">4.3. Нарушение военной этики (свист, неприличные жесты, танцы)</option>
                             <option value="4.4_insult">4.4. Оскорбление гражданских, военнослужащих или госслужащих</option>
@@ -314,8 +338,6 @@
                             <option value="4.50_civ_clothes">4.50. Нахождение на территории ФЗ в гражданской одежде</option>
                             <option value="4.53_storage_items">4.53. Размещение личных вещей на складе Военной базы</option>
                         </optgroup>
-
-                        <!-- РАЗДЕЛ IV | Запреты: Правила строя -->
                         <optgroup label="— РАЗДЕЛ IV: Правила строя —">
                             <option value="4.39_talk_line">4.39. Разговоры друг с другом во время построения</option>
                             <option value="4.40_sleep_line">4.40. Сон во время построения</option>
@@ -323,16 +345,12 @@
                             <option value="4.42_indecent_line">4.42. Непристойные движения в строю</option>
                             <option value="4.46_phone_line">4.46. Использование телефона в строю</option>
                         </optgroup>
-
-                        <!-- РАЗДЕЛ V | Караульная дисциплина -->
                         <optgroup label="— РАЗДЕЛ V: Караульная дисциплина —">
                             <option value="5.1_kpp_pass">5.1. Проход/проезд через КПП дальше будки без разрешения</option>
                             <option value="5.2_kpp_uniform">5.2. Нахождение на КПП без полной формы или без отметки в рации</option>
                             <option value="5.3_guard_rules">5.3. Нарушение правил караульной службы</option>
                             <option value="5.5_guard_abuse">5.5. Корыстное использование полномочий караульного</option>
                         </optgroup>
-
-                        <!-- РАЗДЕЛ VI | Иные и прочие правонарушения -->
                         <optgroup label="— РАЗДЕЛ VI: Иные правонарушения и особые проступки —">
                             <option value="6.1_other_breach">6.1. Иное нарушение внутренних регламентов, не вошедшее в основные статьи</option>
                             <option value="6.2_provocation">6.2. Провокационные действия в отношении сослуживцев или гражданских лиц</option>
@@ -363,7 +381,6 @@
         
         const CONFIG = {
             NOMENCLATURE_MAP: {
-                // Раздел II
                 "2.1_zakon": "2.1. Незнание/несоблюдение законодательства штата",
                 "2.2_sub": "2.2. Нарушение правил субординации",
                 "2.3_morals": "2.3. Проявление неуважения и грубости",
@@ -375,8 +392,6 @@
                 "2.10_appearance": "2.10. Неподобающий внешний вид",
                 "2.11_civil_ty": "2.11. Общение с гражданскими на «Ты» / Хамство",
                 "2.12_report": "2.12. Отсутствие еженедельного отчета",
-                
-                // Раздел IV (Транспорт)
                 "4.2_vvp": "4.2. Перемещение по ВПП не перпендикулярно",
                 "4.13_tech_misuse": "4.13. Использование техники не по назначению",
                 "4.15_weapon_give": "4.15. Передача табельного оружия посторонним",
@@ -391,8 +406,6 @@
                 "4.43_column_overtake": "4.43. Обгон сформированной колонны",
                 "4.45_column_route": "4.45. Отклонение от маршрута колонны",
                 "4.52_flight_access": "4.52. Использование летной техники без доступа",
-
-                // Раздел IV (Дисциплина и посты)
                 "4.12_post_leave": "4.12. Самовольный уход с поста",
                 "4.16_unauth_pass": "4.16. Пропуск на ФЗ лиц без доступа",
                 "4.17_ignore_orders": "4.17. Игнорирование приказов старшего состава",
@@ -408,8 +421,6 @@
                 "4.51_post_absent": "4.51. Отсутствие на рабочем посту более 7 дней",
                 "4.54_penalties": "4.54. Незаконная выдача взысканий",
                 "4.55_interfere_dept": "4.55. Вмешательство в работу других отделов",
-
-                // Раздел IV (Порядок и поведение)
                 "4.3_ethics": "4.3. Нарушение военной этики",
                 "4.4_insult": "4.4. Оскорбление гражданских или служащих",
                 "4.5_beg_rank": "4.5. Выпрашивание повышения или звания",
@@ -428,21 +439,15 @@
                 "4.44_civil_talk": "4.44. Разговоры с гражданскими на отвлеченные темы",
                 "4.50_civ_clothes": "4.50. Нахождение на ФЗ в гражданской одежде",
                 "4.53_storage_items": "4.53. Личные вещи на складе базы",
-
-                // Раздел IV (Строй)
                 "4.39_talk_line": "4.39. Разговоры в строю",
                 "4.40_sleep_line": "4.40. Сон в строю",
                 "4.41_leave_line": "4.41. Самовольный уход из строя",
                 "4.42_indecent_line": "4.42. Непристойные движения в строю",
                 "4.46_phone_line": "4.46. Использование телефона в строю",
-
-                // Раздел V (Караул)
                 "5.1_kpp_pass": "5.1. Нарушение правил прохода через КПП",
                 "5.2_kpp_uniform": "5.2. Нарушение формы/отметки на КПП",
                 "5.3_guard_rules": "5.3. Нарушение правил караульной службы",
                 "5.5_guard_abuse": "5.5. Корыстное использование полномочий караульного",
-
-                // Раздел VI (Иные правонарушения)
                 "6.1_other_breach": "6.1. Иное нарушение регламентов",
                 "6.2_provocation": "6.2. Провокационные действия",
                 "6.3_radio_flood": "6.3. Засорение служебной волны (флуд)",
@@ -455,8 +460,9 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUserData = null;
         let allLoadedReports = []; 
+        let pendingFactorId = null; 
+        let currentEnrollFactorId = null;
 
-        // UI Навигация
         function switchPanel(panelId) {
             ['hero-welcome', 'dashboard-panel', 'reports-panel'].forEach(id => {
                 const el = document.getElementById(id);
@@ -469,31 +475,143 @@
         window.openModal = (id) => document.getElementById(id).classList.add('active');
         window.closeModal = (id) => {
             document.getElementById(id).classList.remove('active');
-            document.querySelectorAll('#status-msg, #report-status-msg').forEach(msg => msg.innerText = '');
+            document.querySelectorAll('#status-msg, #report-status-msg, #mfa-setup-msg').forEach(msg => msg.innerText = '');
         }
 
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
 
-        // АВТОРИЗАЦИЯ
+        // --- АВТОРИЗАЦИЯ И МНОГОФАКТОРНАЯ ПРОВЕРКА (2FA) ---
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-submit-btn'); const msg = document.getElementById('status-msg');
             btn.disabled = true; btn.innerText = 'Подключение...';
+            
             const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: document.getElementById('login-static').value.trim(), 
                 password: document.getElementById('login-password').value
             });
+
             if (error) { 
                 msg.innerHTML = '❌ Ошибка доступа: ' + error.message; msg.style.color = '#f87171'; 
                 btn.disabled = false; btn.innerText = 'Подключиться к БД';
-            } else { 
+                return;
+            }
+
+            // Проверяем, включен ли 2FA у данного офицера
+            const { data: aalData } = await supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
+            
+            if (aalData.nextLevel === 'aal2' && aalData.currentLevel !== 'aal2') {
+                // Если 2FA привязан, переключаем модалку на ввод кода из приложения
+                const { data: factors } = await supabaseClient.auth.mfa.listFactors();
+                const totpFactor = factors.totp[0];
+                pendingFactorId = totpFactor.id;
+
+                document.getElementById('auth-form').classList.add('hidden');
+                document.getElementById('mfa-challenge-form').classList.remove('hidden');
+                document.getElementById('auth-modal-title').innerText = 'Защита 2FA (Google Auth)';
+                msg.innerText = '';
+            } else {
+                // 2FA не включен, сразу открываем кабинет
                 msg.innerHTML = '✅ Доступ разрешен'; msg.style.color = '#34d399'; 
                 setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 800); 
             }
         };
 
-        // ПРОФИЛЬ
+        // Подтверждение 2FA кода при входе
+        document.getElementById('mfa-challenge-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('mfa-submit-btn'); const msg = document.getElementById('status-msg');
+            const code = document.getElementById('mfa-code-input').value.trim();
+            btn.disabled = true; btn.innerText = 'Проверка...';
+
+            try {
+                const { data: challengeData, error: chalErr } = await supabaseClient.auth.mfa.challenge({ factorId: pendingFactorId });
+                if (chalErr) throw chalErr;
+
+                const { data: verifyData, error: verErr } = await supabaseClient.auth.mfa.verify({
+                    factorId: pendingFactorId,
+                    challengeId: challengeData.id,
+                    code: code
+                });
+                if (verErr) throw verErr;
+
+                msg.innerHTML = '✅ Двухфакторная проверка пройдена!'; msg.style.color = '#34d399';
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                setTimeout(() => { 
+                    // Сбрасываем форму модалки входа
+                    document.getElementById('mfa-challenge-form').classList.add('hidden');
+                    document.getElementById('auth-form').classList.remove('hidden');
+                    document.getElementById('auth-modal-title').innerText = 'Авторизация MP';
+                    closeModal('auth-modal'); 
+                    loadProfile(user); 
+                }, 800);
+
+            } catch (err) {
+                msg.innerHTML = '❌ Неверный 2FA код: ' + err.message; msg.style.color = '#f87171';
+                btn.disabled = false; btn.innerText = 'Подтвердить личность';
+            }
+        };
+
+        // --- НАСТРОЙКА И ПРИВЯЗКА 2FA (B ЛИЧНОМ КАБИНЕТЕ) ---
+        async function initMFAEnrollment() {
+            const btn = document.getElementById('mfa-setup-btn');
+            btn.disabled = true;
+
+            const { data, error } = await supabaseClient.auth.mfa.enroll({ factorType: 'totp', issuer: 'SANG MP Terminal' });
+            if (error) {
+                alert('Ошибка инициализации 2FA: ' + error.message);
+                btn.disabled = false;
+                return;
+            }
+
+            currentEnrollFactorId = data.id;
+            document.getElementById('mfa-qr-code').innerHTML = data.totp.qr_code;
+            document.getElementById('mfa-secret-key').innerText = data.totp.secret;
+            
+            openModal('mfa-setup-modal');
+            btn.disabled = false;
+        }
+
+        document.getElementById('mfa-verify-enroll-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('mfa-enroll-submit-btn'); const msg = document.getElementById('mfa-setup-msg');
+            const code = document.getElementById('mfa-enroll-code').value.trim();
+            btn.disabled = true; btn.innerText = 'Активация...';
+
+            try {
+                const { data: challengeData, error: chalErr } = await supabaseClient.auth.mfa.challenge({ factorId: currentEnrollFactorId });
+                if (chalErr) throw chalErr;
+
+                const { error: verErr } = await supabaseClient.auth.mfa.verify({
+                    factorId: currentEnrollFactorId,
+                    challengeId: challengeData.id,
+                    code: code
+                });
+                if (verErr) throw verErr;
+
+                msg.innerHTML = '🎉 Двухфакторная защита успешно подключена!'; msg.style.color = '#34d399';
+                setTimeout(() => {
+                    closeModal('mfa-setup-modal');
+                    updateMFAButtonStatus(true);
+                }, 1500);
+
+            } catch (err) {
+                msg.innerHTML = '❌ Ошибка подтверждения: ' + err.message; msg.style.color = '#f87171';
+                btn.disabled = false; btn.innerText = 'Активировать защиту';
+            }
+        };
+
+        function updateMFAButtonStatus(isEnabled) {
+            const btn = document.getElementById('mfa-setup-btn');
+            if (isEnabled) {
+                btn.className = 'btn btn-success';
+                btn.innerText = '✅ 2FA Активна';
+                btn.onclick = null;
+            }
+        }
+
+        // --- ПРОФИЛЬ И ПАНЕЛЬ ---
         async function loadProfile(user) {
             const { data } = await supabaseClient.from('unit_roster').select('*').eq('id', user.id).single();
             if (data) {
@@ -510,11 +628,17 @@
                 const navReports = document.getElementById('nav-reports');
                 navReports.classList.remove('hidden');
                 navReports.onclick = () => { switchPanel('reports-panel'); loadReports(); };
+
+                // Проверяем состояние 2FA для профиля
+                const { data: factors } = await supabaseClient.auth.mfa.listFactors();
+                if (factors && factors.totp && factors.totp.length > 0 && factors.totp[0].status === 'verified') {
+                    updateMFAButtonStatus(true);
+                }
             }
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // ПОДАЧА РАПОРТА
+        // --- ПОДАЧА РАПОРТА ---
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
@@ -577,7 +701,7 @@
             }
         };
 
-        // ЗАГРУЗКА РЕЕСТРА И ПОИСК
+        // --- ЗАГРУЗКА РЕЕСТРА И ПОИСК ---
         async function loadReports() {
             const tbody = document.getElementById('reports-table-body');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Синхронизация с базой данных...</td></tr>';
@@ -692,6 +816,7 @@
             loadReports();
         };
 
+        // Инициализация при загрузке страницы
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
     </script>
 </body>
