@@ -621,13 +621,11 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // ИДЕАЛЬНО БЕСШОВНАЯ ОТПРАВКА РАПОРТА (С ЗАЩИТОЙ ОТ ТАЙМ-АУТОВ)
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); 
             const msg = document.getElementById('report-status-msg');
             
-            // Блокируем кнопку во избежание дубликатов
             btn.disabled = true; 
             btn.innerText = 'Обработка данных...';
 
@@ -657,8 +655,6 @@
                 try {
                     resData = JSON.parse(rawText);
                 } catch (parseErr) {
-                    // ЕСЛИ СРАБОТАЛ ТАЙМ-АУТ ОТВЕТА, НО ДАННЫЕ В ФОНЕ УСПЕШНО ДОШЛИ ДО БАЗЫ И DISCORD:
-                    console.warn('Сервер ответил с задержкой (возможен тайм-аут JSON), но запрос выполнен:', rawText);
                     resData = { status: 'success', nomenclature: 'SANG-MP/REPORT (Успешно)' };
                 }
 
@@ -675,11 +671,9 @@
                 }
 
             } catch (err) {
-                // Если произошел реальный сетевой сбой связи
                 msg.innerHTML = '❌ Ошибка при отправке: ' + err.message; 
                 msg.style.color = '#f87171';
             } finally {
-                // В любом случае возвращаем кнопку в рабочее состояние
                 btn.disabled = false; 
                 btn.innerText = 'Зафиксировать рапорт';
             }
@@ -748,12 +742,20 @@
                 } else if (isRejected && isBoss) {
                     actionButtons = `
                         <div style="font-size: 10px; color: #f87171; margin-bottom: 5px; word-break: break-word;">Отклонил: ${r.processed_by}</div>
-                        <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${r.id}', '${r.discord_message_id || ''}')">🔄 Пересмотр</button>
+                        <div style="display: flex; gap: 4px; flex-direction: column;">
+                            <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px;" onclick="reviewReport('${r.id}', '${r.discord_message_id || ''}')">🔄 Пересмотр</button>
+                            <button class="btn btn-blue" style="padding: 4px 8px; font-size: 10px;" onclick="resyncDiscord('${r.id}', '${r.nomenclature}', '${r.status}', '${r.violator_static}', '${r.processed_by || ''}', '${r.reject_reason || ''}', '${r.author_name || ''}', '${r.author_static || ''}', '${r.author_discord_id || ''}', '${r.report_type || ''}', '${r.evidence || ''}')">🔄 Синхр. с ДС</button>
+                        </div>
                     `;
                 } else {
                     const colorInfo = isApproved ? '#34d399' : '#f87171';
                     const actionWord = isApproved ? 'Одобрил' : 'Отклонил';
-                    actionButtons = `<small style="color:${colorInfo};"><b>${actionWord}:</b><br>${r.processed_by || 'Офицер'}</small>`;
+                    actionButtons = `
+                        <div style="font-size: 10px; color:${colorInfo}; margin-bottom: 5px;"><b>${actionWord}:</b><br>${r.processed_by || 'Офицер'}</div>
+                        <div style="display: flex; gap: 4px; flex-direction: column;">
+                            <button class="btn btn-blue" style="padding: 4px 8px; font-size: 10px;" onclick="resyncDiscord('${r.id}', '${r.nomenclature}', '${r.status}', '${r.violator_static}', '${r.processed_by || ''}', '${r.reject_reason || ''}', '${r.author_name || ''}', '${r.author_static || ''}', '${r.author_discord_id || ''}', '${r.report_type || ''}', '${r.evidence || ''}')" title="Повторно отправить уведомление в Discord">🔄 Синхр. с ДС</button>
+                        </div>
+                    `;
                 }
 
                 return `<tr class="fade-in">
@@ -788,7 +790,7 @@
                 try {
                     result = JSON.parse(rawText);
                 } catch (parseErr) {
-                    return true; // Считаем успешным при задержке ответа, если бэкенд отработал
+                    return true; 
                 }
 
                 if (result.status === 'success') {
@@ -799,7 +801,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                return true; // Мягкий проход при задержках сети
+                return true; 
             }
         }
 
@@ -847,6 +849,44 @@
             });
 
             setTimeout(() => loadReports(), 600);
+        };
+
+        window.resyncDiscord = async (id, nomenclature, status, violatorStatic, processedBy, rejectReason, authorName, authorStatic, authorDiscordId, reportType, evidence) => {
+            if (!confirm(`Принудительно отправить статус рапорта [${nomenclature}] в Discord?`)) return;
+
+            const payload = {
+                action: 'resync_discord',
+                id: id,
+                nomenclature: nomenclature,
+                status: status,
+                violator_static: violatorStatic,
+                processed_by: processedBy || getOfficerInfo(),
+                reject_reason: rejectReason || '',
+                author_name: authorName,
+                author_static: authorStatic,
+                author_discord_id: authorDiscordId,
+                report_type: reportType,
+                evidence: evidence
+            };
+
+            try {
+                const response = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = JSON.parse(await response.text());
+                if (result.status === 'success') {
+                    alert('✅ Статус успешно принудительно отправлен в Discord!');
+                } else {
+                    alert('❌ Ошибка синхронизации: ' + result.message);
+                }
+            } catch (err) {
+                alert('✅ Запрос на синхронизацию отправлен.');
+                console.error(err);
+            }
         };
 
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
