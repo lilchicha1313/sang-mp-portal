@@ -113,7 +113,6 @@
         .fade-in { animation: fadeIn 0.5s ease forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* QR-Код стили */
         #mfa-qr-code svg { width: 180px; height: 180px; background: #fff; padding: 10px; border-radius: 8px; margin: 0 auto; display: block; }
 
         @media (max-width: 768px) {
@@ -140,7 +139,6 @@
     </header>
 
     <main>
-        <!-- ПУБЛИЧНЫЙ ЭКРАН -->
         <div class="hero-card fade-in" id="hero-welcome">
             <div class="subtitle">Secure Network SANG</div>
             <h1>Подача рапорта о нарушении</h1>
@@ -148,7 +146,6 @@
             <button class="btn btn-blue" style="font-size: 15px; padding: 14px 30px;" onclick="openModal('report-modal')">📄 Инициировать рапорт</button>
         </div>
 
-        <!-- ЛИЧНЫЙ КАБИНЕТ -->
         <div class="hero-card hidden" id="dashboard-panel" style="text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
                 <div>
@@ -172,7 +169,6 @@
             </div>
         </div>
 
-        <!-- РЕЕСТР РАПОРТОВ -->
         <div class="hero-card hidden" id="reports-panel" style="text-align: left; max-width: 1400px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                 <div>
@@ -204,23 +200,20 @@
         </div>
     </main>
 
-    <!-- МОДАЛКА ВХОДА И 2FA ПРОВЕРКИ -->
     <div class="modal-overlay" id="auth-modal">
         <div class="modal-card" style="border-top-color: var(--accent-color);">
             <button class="close-btn" onclick="closeModal('auth-modal')">&times;</button>
             <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;" id="auth-modal-title">Авторизация MP</h2>
             
-            <!-- Шаг 1: Email и Пароль -->
             <form id="auth-form">
                 <div class="form-group"><label>Служебный Email</label><input type="text" id="login-static" placeholder="officer@sang.local" required></div>
                 <div class="form-group"><label>Пароль доступа</label><input type="password" id="login-password" required></div>
                 <button type="submit" class="btn btn-danger" id="login-submit-btn" style="width: 100%; margin-top: 10px;">Подключиться к БД</button>
             </form>
 
-            <!-- Шаг 2: Ввод 6-значного кода MFA -->
             <form id="mfa-challenge-form" class="hidden">
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
-                    Введите 6-значный одноразовый код из приложения <strong>Google Authenticator</strong> на вашем телефоне.
+                    Введите 6-значный одноразовый код из приложения <strong>2FA Authenticator</strong> на вашем телефоне.
                 </p>
                 <div class="form-group">
                     <label>Код подтверждения (TOTP)</label>
@@ -233,7 +226,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА НАСТРОЙКИ 2FA (QR-КОД) -->
     <div class="modal-overlay" id="mfa-setup-modal">
         <div class="modal-card" style="border-top-color: #f59e0b; text-align: center;">
             <button class="close-btn" onclick="closeModal('mfa-setup-modal')">&times;</button>
@@ -255,7 +247,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА ПОДАЧИ РАПОРТА -->
     <div class="modal-overlay" id="report-modal">
         <div class="modal-card">
             <button class="close-btn" onclick="closeModal('report-modal')">&times;</button>
@@ -378,6 +369,7 @@
     <script>
         const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwgTPEFs0TCLcHnGriNeRQReXCrxyLmtd2toeEdtjOT7EVCHSHc1zKxaQm1cblLxtvLaA/exec';
         
         const CONFIG = {
             NOMENCLATURE_MAP: {
@@ -481,7 +473,6 @@
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
 
-        // --- АВТОРИЗАЦИЯ И МНОГОФАКТОРНАЯ ПРОВЕРКА (2FA) ---
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-submit-btn'); const msg = document.getElementById('status-msg');
@@ -498,11 +489,9 @@
                 return;
             }
 
-            // Проверяем, включен ли 2FA у данного офицера
             const { data: aalData } = await supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
             
             if (aalData.nextLevel === 'aal2' && aalData.currentLevel !== 'aal2') {
-                // Если 2FA привязан, переключаем модалку на ввод кода из приложения
                 const { data: factors } = await supabaseClient.auth.mfa.listFactors();
                 const totpFactor = factors.totp[0];
                 pendingFactorId = totpFactor.id;
@@ -512,13 +501,11 @@
                 document.getElementById('auth-modal-title').innerText = 'Защита 2FA (Google Auth)';
                 msg.innerText = '';
             } else {
-                // 2FA не включен, сразу открываем кабинет
                 msg.innerHTML = '✅ Доступ разрешен'; msg.style.color = '#34d399'; 
                 setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 800); 
             }
         };
 
-        // Подтверждение 2FA кода при входе
         document.getElementById('mfa-challenge-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('mfa-submit-btn'); const msg = document.getElementById('status-msg');
@@ -539,7 +526,6 @@
                 msg.innerHTML = '✅ Двухфакторная проверка пройдена!'; msg.style.color = '#34d399';
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 setTimeout(() => { 
-                    // Сбрасываем форму модалки входа
                     document.getElementById('mfa-challenge-form').classList.add('hidden');
                     document.getElementById('auth-form').classList.remove('hidden');
                     document.getElementById('auth-modal-title').innerText = 'Авторизация MP';
@@ -553,7 +539,6 @@
             }
         };
 
-        // --- НАСТРОЙКА И ПРИВЯЗКА 2FA (B ЛИЧНОМ КАБИНЕТЕ) ---
         async function initMFAEnrollment() {
             const btn = document.getElementById('mfa-setup-btn');
             btn.disabled = true;
@@ -611,7 +596,6 @@
             }
         }
 
-        // --- ПРОФИЛЬ И ПАНЕЛЬ ---
         async function loadProfile(user) {
             const { data } = await supabaseClient.from('unit_roster').select('*').eq('id', user.id).single();
             if (data) {
@@ -629,7 +613,6 @@
                 navReports.classList.remove('hidden');
                 navReports.onclick = () => { switchPanel('reports-panel'); loadReports(); };
 
-                // Проверяем состояние 2FA для профиля
                 const { data: factors } = await supabaseClient.auth.mfa.listFactors();
                 if (factors && factors.totp && factors.totp.length > 0 && factors.totp[0].status === 'verified') {
                     updateMFAButtonStatus(true);
@@ -638,70 +621,52 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // --- ПОДАЧА РАПОРТА ---
+        // ПОДАЧА РАПОРТА ЧЕРЕЗ GAS (ОТПРАВКА ДАННЫХ И УВЕДОМЛЕНИЙ)
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
             btn.disabled = true; btn.innerText = 'Обработка данных...';
 
-            const authorName = document.getElementById('author-name').value.trim();
-            const authorStatic = document.getElementById('author-static').value.trim();
-            const violatorStatic = document.getElementById('violator-static').value.trim();
             const rawType = document.getElementById('report-type').value;
-            const niceReason = CONFIG.NOMENCLATURE_MAP[rawType] || rawType;
-            let desc = document.getElementById('report-desc').value.trim();
+            const payload = {
+                action: 'create_report',
+                author_name: document.getElementById('author-name').value.trim(),
+                author_static: document.getElementById('author-static').value.trim(),
+                author_discord_id: document.getElementById('author-discord-id').value.trim(),
+                violator_static: document.getElementById('violator-static').value.trim(),
+                report_type: CONFIG.NOMENCLATURE_MAP[rawType] || rawType,
+                details: document.getElementById('report-desc').value.trim(),
+                evidence: document.getElementById('report-proof').value.trim()
+            };
 
             try {
-                const { count: authorCount } = await supabaseClient
-                    .from('reports')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('author_static', authorStatic);
-                
-                const reportIndex = (authorCount || 0) + 1;
-                const nomenclature = `SANG-MP/REPORT-${authorStatic}/${reportIndex}`;
+                const response = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
 
-                const { data: pastViolations } = await supabaseClient
-                    .from('reports')
-                    .select('nomenclature, report_type, status, created_at')
-                    .eq('violator_static', violatorStatic)
-                    .neq('status', 'rejected')
-                    .order('created_at', { ascending: true });
+                const resData = await response.json();
 
-                let detailsToSave = desc;
-                
-                if (pastViolations && pastViolations.length > 0) {
-                    const historyList = pastViolations.map((v, idx) => 
-                        `#${idx + 1}: [${v.nomenclature}] — ${v.report_type}`
-                    ).join('\n');
-
-                    const alertHeader = `[⚠️ СИСТЕМА: ИСТОРИЯ РЕЦИДИВОВ]\nВсего зафиксировано нарушений: ${pastViolations.length}\nСписок:\n${historyList}\n========================================\n\nСуть текущего нарушения:\n`;
-                    detailsToSave = alertHeader + desc;
+                if (resData.status === 'success') {
+                    msg.innerHTML = `✅ Рапорт успешно зарегистрирован: <b>${resData.nomenclature}</b>`; 
+                    msg.style.color = '#34d399'; 
+                    setTimeout(() => { 
+                        closeModal('report-modal'); btn.disabled = false; btn.innerText = 'Зафиксировать рапорт'; 
+                        document.getElementById('report-form').reset(); 
+                        if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
+                    }, 1500);
+                } else {
+                    throw new Error(resData.message || 'Ошибка обработки скриптом');
                 }
 
-                const { error: dbError } = await supabaseClient.from('reports').insert([{
-                    author_name: authorName, author_static: authorStatic,
-                    author_discord_id: document.getElementById('author-discord-id').value.trim(),
-                    violator_static: violatorStatic, report_type: niceReason,
-                    details: detailsToSave, evidence: document.getElementById('report-proof').value.trim(),
-                    nomenclature: nomenclature, status: 'pending'
-                }]);
-
-                if (dbError) throw dbError;
-
-                msg.innerHTML = '✅ Рапорт успешно зарегистрирован!'; msg.style.color = '#34d399'; 
-                setTimeout(() => { 
-                    closeModal('report-modal'); btn.disabled = false; btn.innerText = 'Зафиксировать рапорт'; 
-                    document.getElementById('report-form').reset(); 
-                    if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
-                }, 1500);
-
             } catch (err) {
-                msg.innerHTML = '❌ Ошибка БД: ' + err.message; msg.style.color = '#f87171';
+                msg.innerHTML = '❌ Ошибка при отправке: ' + err.message; msg.style.color = '#f87171';
                 btn.disabled = false; btn.innerText = 'Зафиксировать рапорт';
             }
         };
 
-        // --- ЗАГРУЗКА РЕЕСТРА И ПОИСК ---
         async function loadReports() {
             const tbody = document.getElementById('reports-table-body');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Синхронизация с базой данных...</td></tr>';
@@ -816,7 +781,6 @@
             loadReports();
         };
 
-        // Инициализация при загрузке страницы
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
     </script>
 </body>
