@@ -660,6 +660,7 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
+        // Интерактивная проверка прошлых нарушений нарушителя
         async function checkViolatorHistory() {
             const violatorStatic = document.getElementById('violator-static').value.trim();
             const hintBox = document.getElementById('violator-history-hint');
@@ -684,12 +685,13 @@
             }
         }
 
+        // --- ФУНКЦИИ DISCORD WEBHOOK ---
         async function sendDiscordNotification(report, nomenclature) {
             if (!CONFIG.DISCORD_WEBHOOK_URL || CONFIG.DISCORD_WEBHOOK_URL.includes('ВАША_ССЫЛКА')) return null;
             
             const embed = {
                 title: `📄 Новый рапорт: ${nomenclature}`,
-                color: 0xf59e0b,
+                color: 0xf59e0b, 
                 fields: [
                     { name: '👤 Заявитель', value: `${report.author_name} (Статик: ${report.author_static})`, inline: true },
                     { name: '🎯 Нарушитель', value: `Статик: ${report.violator_static}`, inline: true },
@@ -720,7 +722,7 @@
             if (!CONFIG.DISCORD_WEBHOOK_URL || CONFIG.DISCORD_WEBHOOK_URL.includes('ВАША_ССЫЛКА') || !report.discord_message_id) return;
             
             const isApproved = status === 'approved';
-            const color = isApproved ? 0x10b981 : 0xef4444;
+            const color = isApproved ? 0x10b981 : 0xef4444; 
             const statusText = isApproved ? '✅ Одобрен' : `❌ Отклонен${rejectReason ? ` (${rejectReason})` : ''}`;
 
             const embed = {
@@ -748,6 +750,7 @@
                 console.error('Discord update error:', e);
             }
         }
+        // -------------------------------
 
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
@@ -764,6 +767,7 @@
             const baseDesc = document.getElementById('report-desc').value.trim();
 
             try {
+                // 1. Вычисляем порядковый номер рапорта строго по статике текущего ЗАЯВИТЕЛЯ
                 const { data: myReports, error: countErr } = await supabaseClient
                     .from('reports')
                     .select('nomenclature')
@@ -773,6 +777,7 @@
                 const nextReportNum = (myReports ? myReports.length : 0) + 1;
                 const assignedNomenclature = `SANG-MP/REPORT-${authorStatic}/${nextReportNum}`;
 
+                // 2. Ищем прошлые одобренные рапорты нарушителя для истории рецидивов
                 const { data: pastReports } = await supabaseClient
                     .from('reports')
                     .select('nomenclature, report_type')
@@ -782,6 +787,7 @@
 
                 let finalDetails = baseDesc;
 
+                // 3. Формируем структурированный блок рецидивов, если они есть
                 if (pastReports && pastReports.length > 0) {
                     let historyLines = [];
                     historyLines.push(`[⚠️ СИСТЕМА: ИСТОРИЯ РЕЦИДИВОВ]`);
@@ -799,6 +805,7 @@
                     finalDetails = historyLines.join('\n');
                 }
 
+                // 4. Подготавливаем данные для вставки
                 const reportPayload = {
                     nomenclature: assignedNomenclature,
                     author_name: document.getElementById('author-name').value.trim(),
@@ -811,6 +818,7 @@
                     status: 'pending'
                 };
 
+                // Запись в Supabase с возвратом вставленной строки
                 const { data: insertedReport, error: insertErr } = await supabaseClient
                     .from('reports')
                     .insert([reportPayload])
@@ -819,6 +827,7 @@
 
                 if (insertErr) throw insertErr;
 
+                // 5. Отправка уведомления в Discord и сохранение message_id
                 if (insertedReport) {
                     const discordMsgId = await sendDiscordNotification(insertedReport, assignedNomenclature);
                     if (discordMsgId) {
