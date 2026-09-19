@@ -658,6 +658,7 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
+        // Интерактивная проверка истории рецидивов при вводе статика нарушителя
         async function checkViolatorHistory() {
             const violatorStatic = document.getElementById('violator-static').value.trim();
             const hintBox = document.getElementById('violator-history-hint');
@@ -668,6 +669,7 @@
                 return;
             }
 
+            // Учитываем СТРОГО одобренные рапорты (рецидив)
             const { data, error } = await supabaseClient
                 .from('reports')
                 .select('id, nomenclature, report_type, created_at')
@@ -676,12 +678,13 @@
 
             if (!error && data && data.length > 0) {
                 hintBox.classList.remove('hidden');
-                hintText.innerHTML = `Внимание! У статика <b>${violatorStatic}</b> обнаружено одобренных рапортов: <b>${data.length}</b> (Рецидив)`;
+                hintText.innerHTML = `Внимание! У этого нарушителя уже есть <b>${data.length}</b> одобренных рапорт(-а/-ов). Это рецидив!`;
             } else {
                 hintBox.classList.add('hidden');
             }
         }
 
+        // Обработка отправки рапорта с автоматическим формированием рецидива в details
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); 
@@ -697,6 +700,7 @@
             const baseDesc = document.getElementById('report-desc').value.trim();
 
             try {
+                // 1. Генерируем номенклатуру для заявителя
                 const { data: myReports, error: countErr } = await supabaseClient
                     .from('reports')
                     .select('nomenclature')
@@ -706,26 +710,28 @@
                 const nextReportNum = (myReports ? myReports.length : 0) + 1;
                 const assignedNomenclature = `SANG-MP/REPORT-${authorStatic}/${nextReportNum}`;
 
+                // 2. Получаем историю СТРОГО ОДОБРЕННЫХ нарушений нарушителя для рецидива
                 const { data: pastReports } = await supabaseClient
                     .from('reports')
-                    .select('nomenclature, report_type')
+                    .select('nomenclature, report_type, created_at')
                     .eq('violator_static', violatorStaticInput)
                     .eq('status', 'approved')
                     .order('created_at', { ascending: true });
 
                 let finalDetails = baseDesc;
 
+                // 3. Красиво оформляем блок рецидива в поле details (для сайта и будущей отправки в Discord-вебхук)
                 if (pastReports && pastReports.length > 0) {
                     let historyLines = [];
-                    historyLines.push(`[⚠️ СИСТЕМА: ИСТОРИЯ РЕЦИДИВОВ]`);
-                    historyLines.push(`Всего зафиксировано нарушений: ${pastReports.length}`);
-                    historyLines.push(`Список:`);
+                    historyLines.push(`[⚠️ СИСТЕМА: УЧЕТ РЕЦИДИВА]`);
+                    historyLines.push(`Количество прошлых одобренных нарушений: ${pastReports.length}`);
+                    historyLines.push(`История нарушений:`);
                     
                     pastReports.forEach((rep, index) => {
-                        historyLines.push(`#${index + 1}: [${rep.nomenclature || 'SANG-MP/REPORT-...'}] — ${rep.report_type}`);
+                        historyLines.push(`🔹 Нарушение #${index + 1}: [${rep.nomenclature || 'SANG-MP/REPORT-...'}] — ${rep.report_type}`);
                     });
                     
-                    historyLines.push(`==============================`);
+                    historyLines.push(`----------------------------------------`);
                     historyLines.push(`Суть текущего нарушения:`);
                     historyLines.push(baseDesc);
 
@@ -741,7 +747,7 @@
                     report_type: typeName,
                     details: finalDetails,
                     evidence: document.getElementById('report-proof').value.trim(),
-                    status: 'pending'
+                    status: 'pending' // Новый рапорт всегда падает на рассмотрение
                 };
 
                 const { error: insertErr } = await supabaseClient
