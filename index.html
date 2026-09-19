@@ -658,7 +658,7 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // Интерактивная проверка прошлых нарушений нарушителя прямо при заполнении
+        // Интерактивная проверка прошлых нарушений нарушителя
         async function checkViolatorHistory() {
             const violatorStatic = document.getElementById('violator-static').value.trim();
             const hintBox = document.getElementById('violator-history-hint');
@@ -673,7 +673,7 @@
                 .from('reports')
                 .select('id, nomenclature, report_type, created_at')
                 .eq('violator_static', violatorStatic)
-                .eq('status', 'approved'); // Учитываем только одобренные рапорты для рецидива
+                .eq('status', 'approved');
 
             if (!error && data && data.length > 0) {
                 hintBox.classList.remove('hidden');
@@ -692,35 +692,64 @@
             btn.innerText = 'Обработка данных...';
 
             const rawType = document.getElementById('report-type').value;
+            const typeName = CONFIG.NOMENCLATURE_MAP[rawType] || rawType;
+            const authorStatic = document.getElementById('author-static').value.trim();
             const violatorStaticInput = document.getElementById('violator-static').value.trim();
+            const baseDesc = document.getElementById('report-desc').value.trim();
 
             try {
-                // Считаем количество прошлых ОДОБРЕННЫХ нарушений для рецидива
+                // 1. Вычисляем порядковый номер рапорта для текущего заявителя (SANG-MP/REPORT-[Статик]/[Номер])
+                const { data: myReports, error: countErr } = await supabaseClient
+                    .from('reports')
+                    .select('nomenclature')
+                    .eq('author_static', authorStatic);
+
+                if (countErr) throw countErr;
+                const nextReportNum = (myReports ? myReports.length : 0) + 1;
+                const assignedNomenclature = `SANG-MP/REPORT-${authorStatic}/${nextReportNum}`;
+
+                // 2. Ищем прошлые одобренные рапорты нарушителя для истории рецидивов
                 const { data: pastReports } = await supabaseClient
                     .from('reports')
-                    .select('id')
+                    .select('nomenclature, report_type')
                     .eq('violator_static', violatorStaticInput)
-                    .eq('status', 'approved');
+                    .eq('status', 'approved')
+                    .order('created_at', { ascending: true });
 
-                const recidivismCount = (pastReports ? pastReports.length : 0) + 1;
-                const baseDesc = document.getElementById('report-desc').value.trim();
-                const detailsText = baseDesc + (pastReports && pastReports.length > 0 ? `\n\n⚠️ [Система]: Нарушение по счету #${recidivismCount} (Рецидив)` : '');
+                let finalDetails = baseDesc;
 
-                // Прямая запись в таблицу Supabase (поле nomenclature сгенерируется триггером базы данных)
-                const { data: insertedData, error } = await supabaseClient.from('reports').insert([{
+                // 3. Формируем структурированный блок рецидивов, если они есть
+                if (pastReports && pastReports.length > 0) {
+                    let historyLines = [];
+                    historyLines.push(`[⚠️ СИСТЕМА: ИСТОРИЯ РЕЦИДИВОВ]`);
+                    historyLines.push(`Всего зафиксировано нарушений: ${pastReports.length}`);
+                    historyLines.push(`Список:`);
+                    
+                    pastReports.forEach((rep, index) => {
+                        historyLines.push(`#${index + 1}: [${rep.nomenclature || 'SANG-MP/REPORT-...'}] — ${rep.report_type}`);
+                    });
+                    
+                    historyLines.push(`==============================`);
+                    historyLines.push(`Суть текущего нарушения:`);
+                    historyLines.push(baseDesc);
+
+                    finalDetails = historyLines.join('\n');
+                }
+
+                // 4. Запись в Supabase с генерацией персональной номенклатуры
+                const { error: insertErr } = await supabaseClient.from('reports').insert([{
+                    nomenclature: assignedNomenclature,
                     author_name: document.getElementById('author-name').value.trim(),
-                    author_static: document.getElementById('author-static').value.trim(),
+                    author_static: authorStatic,
                     author_discord_id: document.getElementById('author-discord-id').value.trim(),
                     violator_static: violatorStaticInput,
-                    report_type: CONFIG.NOMENCLATURE_MAP[rawType] || rawType,
-                    details: detailsText,
+                    report_type: typeName,
+                    details: finalDetails,
                     evidence: document.getElementById('report-proof').value.trim(),
                     status: 'pending'
-                }]).select('nomenclature').single();
+                }]);
 
-                if (error) throw error;
-
-                const assignedNomenclature = insertedData?.nomenclature || 'SANG-MP/REPORT-...';
+                if (insertErr) throw insertErr;
 
                 msg.innerHTML = `✅ Рапорт успешно зарегистрирован: <b>${escapeHTML(assignedNomenclature)}</b>`; 
                 msg.style.color = '#34d399'; 
@@ -791,7 +820,7 @@
                 let statusBadge = '';
                 if (isApproved) statusBadge = `<span class="badge badge-approved">✅ Одобрен</span>`;
                 else if (isRejected) statusBadge = `<span class="badge badge-rejected" title="${escapeHTML(r.reject_reason || '')}">❌ Отклонен</span>`;
-                else statusBadge = `<span class="badge badge-pending">🟡 Ожидает</span>`;
+                else statusBadge = `<span class="badge badge-pending">🟡 На рассмотрении</span>`;
 
                 let actionButtons = '';
                 const msgId = r.discord_message_id ? escapeHTML(r.discord_message_id) : '';
