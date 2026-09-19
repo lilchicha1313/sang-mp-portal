@@ -375,6 +375,9 @@
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
         
         const CONFIG = {
+            // Вставьте вашу ссылку на вебхук Discord ниже в кавычки:
+            DISCORD_WEBHOOK_URL: 'ВАША_ССЫЛКА_НА_DISCORD_WEBHOOK_ЗДЕСЬ',
+            
             NOMENCLATURE_MAP: {
                 "2.1_zakon": "2.1. Незнание/несоблюдение законодательства штата",
                 "2.2_sub": "2.2. Нарушение правил субординации",
@@ -683,6 +686,73 @@
             }
         }
 
+        // --- ФУНКЦИИ DISCORD WEBHOOK ---
+        async function sendDiscordNotification(report, nomenclature) {
+            if (!CONFIG.DISCORD_WEBHOOK_URL || CONFIG.DISCORD_WEBHOOK_URL.includes('ВАША_ССЫЛКА')) return null;
+            
+            const embed = {
+                title: `📄 Новый рапорт: ${nomenclature}`,
+                color: 0xf59e0b, // Желтый (ожидание)
+                fields: [
+                    { name: '👤 Заявитель', value: `${report.author_name} (Статик: ${report.author_static})`, inline: true },
+                    { name: '🎯 Нарушитель', value: `Статик: ${report.violator_static}`, inline: true },
+                    { name: '⚖️ Статья', value: report.report_type, inline: false },
+                    { name: '📝 Детали', value: report.details.length > 1024 ? report.details.substring(0, 1021) + '...' : report.details, inline: false },
+                    { name: '📎 Доказательства', value: report.evidence ? `[Материалы дела](${report.evidence})` : 'Нет', inline: false }
+                ],
+                footer: { text: 'SANG Military Police Terminal • Статус: На рассмотрении' },
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch(`${CONFIG.DISCORD_WEBHOOK_URL}?wait=true`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ embeds: [embed] })
+                });
+                if (!response.ok) return null;
+                const data = await response.json();
+                return data.id || null;
+            } catch (e) {
+                console.error('Discord webhook error:', e);
+                return null;
+            }
+        }
+
+        async function updateDiscordMessage(report, status, processedBy, rejectReason = '') {
+            if (!CONFIG.DISCORD_WEBHOOK_URL || CONFIG.DISCORD_WEBHOOK_URL.includes('ВАША_ССЫЛКА') || !report.discord_message_id) return;
+            
+            const isApproved = status === 'approved';
+            const color = isApproved ? 0x10b981 : 0xef4444; // Зеленый или Красный
+            const statusText = isApproved ? '✅ Одобрен' : `❌ Отклонен${rejectReason ? ` (${rejectReason})` : ''}`;
+
+            const embed = {
+                title: `📄 Рапорт: ${report.nomenclature || 'SANG-MP/REPORT'}`,
+                color: color,
+                fields: [
+                    { name: '👤 Заявитель', value: `${report.author_name} (Статик: ${report.author_static})`, inline: true },
+                    { name: '🎯 Нарушитель', value: `Статик: ${report.violator_static}`, inline: true },
+                    { name: '⚖️ Статья', value: report.report_type, inline: false },
+                    { name: '📝 Детали', value: report.details.length > 1024 ? report.details.substring(0, 1021) + '...' : report.details, inline: false },
+                    { name: '🛡️ Статус проверки', value: `**${statusText}**\nПроверил: ${processedBy}`, inline: false }
+                ],
+                footer: { text: `SANG Military Police Terminal • Обновлено` },
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const editUrl = `${CONFIG.DISCORD_WEBHOOK_URL}/messages/${report.discord_message_id}`;
+                await fetch(editUrl, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ embeds: [embed] })
+                });
+            } catch (e) {
+                console.error('Discord update error:', e);
+            }
+        }
+        // -------------------------------
+
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); 
@@ -698,7 +768,7 @@
             const baseDesc = document.getElementById('report-desc').value.trim();
 
             try {
-                // 1. Вычисляем порядковый номер рапорта для текущего заявителя (SANG-MP/REPORT-[Статик]/[Номер])
+                // 1. Вычисляем порядковый номер рапорта для текущего заявителя со статиком ЗАЯВИТЕЛЯ
                 const { data: myReports, error: countErr } = await supabaseClient
                     .from('reports')
                     .select('nomenclature')
@@ -736,8 +806,8 @@
                     finalDetails = historyLines.join('\n');
                 }
 
-                // 4. Запись в Supabase с генерацией персональной номенклатуры
-                const { error: insertErr } = await supabaseClient.from('reports').insert([{
+                // 4. Подготавливаем данные для вставки
+                const reportPayload = {
                     nomenclature: assignedNomenclature,
                     author_name: document.getElementById('author-name').value.trim(),
                     author_static: authorStatic,
@@ -747,9 +817,27 @@
                     details: finalDetails,
                     evidence: document.getElementById('report-proof').value.trim(),
                     status: 'pending'
-                }]);
+                };
+
+                // Запись в Supabase с возвратом вставленной строки
+                const { data: insertedReport, error: insertErr } = await supabaseClient
+                    .from('reports')
+                    .insert([reportPayload])
+                    .select()
+                    .single();
 
                 if (insertErr) throw insertErr;
+
+                // 5. Отправка уведомления в Discord и сохранение message_id
+                if (insertedReport) {
+                    const discordMsgId = await sendDiscordNotification(insertedReport, assignedNomenclature);
+                    if (discordMsgId) {
+                        await supabaseClient
+                            .from('reports')
+                            .update({ discord_message_id: discordMsgId })
+                            .eq('id', insertedReport.id);
+                    }
+                }
 
                 msg.innerHTML = `✅ Рапорт успешно зарегистрирован: <b>${escapeHTML(assignedNomenclature)}</b>`; 
                 msg.style.color = '#34d399'; 
@@ -823,20 +911,19 @@
                 else statusBadge = `<span class="badge badge-pending">🟡 На рассмотрении</span>`;
 
                 let actionButtons = '';
-                const msgId = r.discord_message_id ? escapeHTML(r.discord_message_id) : '';
                 const reportId = escapeHTML(r.id);
 
                 if (!isApproved && !isRejected) {
                     actionButtons = `
                         <div style="display: flex; gap: 5px;">
-                            <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px;" onclick="approveReport('${reportId}', '${msgId}')" title="Одобрить">✓</button>
-                            <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="rejectReport('${reportId}', '${msgId}')" title="Отклонить">✕</button>
+                            <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px;" onclick="approveReport('${reportId}')" title="Одобрить">✓</button>
+                            <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="rejectReport('${reportId}')" title="Отклонить">✕</button>
                         </div>
                     `;
                 } else if (isRejected && isBoss) {
                     actionButtons = `
                         <div style="font-size: 10px; color: #f87171; margin-bottom: 5px; word-break: break-word;">Отклонил: ${escapeHTML(r.processed_by || 'Офицер')}</div>
-                        <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${reportId}', '${msgId}')">🔄 Пересмотр</button>
+                        <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${reportId}')">🔄 Пересмотр</button>
                     `;
                 } else {
                     const colorInfo = isApproved ? '#34d399' : '#f87171';
@@ -864,18 +951,27 @@
 
         const getOfficerInfo = () => currentUserData ? `${currentUserData.full_name} (${currentUserData.static})` : 'Офицер MP';
 
-        async function sendStatusUpdate(payload) {
+        async function sendStatusUpdate(id, status, processedBy, rejectReason = '') {
             try {
+                // Получаем текущие данные рапорта перед обновлением для патча Discord-сообщения
+                const { data: reportData } = await supabaseClient.from('reports').select('*').eq('id', id).single();
+
                 const { error } = await supabaseClient
                     .from('reports')
                     .update({ 
-                        status: payload.status, 
-                        processed_by: payload.processed_by, 
-                        reject_reason: payload.reject_reason 
+                        status: status, 
+                        processed_by: processedBy, 
+                        reject_reason: rejectReason 
                     })
-                    .eq('id', payload.id);
+                    .eq('id', id);
                     
                 if (error) throw error;
+
+                // Бесшовно обновляем сообщение в Discord
+                if (reportData) {
+                    await updateDiscordMessage(reportData, status, processedBy, rejectReason);
+                }
+
                 return true;
             } catch (err) {
                 alert('Ошибка связи с базой данных: ' + err.message);
@@ -883,43 +979,25 @@
             }
         }
 
-        window.approveReport = async (id, discordMsgId) => {
+        window.approveReport = async (id) => {
             if (!confirm('Подтверждаете ОДОБРЕНИЕ рапорта?')) return;
             
-            const ok = await sendStatusUpdate({
-                id: id,
-                status: 'approved',
-                processed_by: getOfficerInfo(),
-                reject_reason: ''
-            });
-
+            const ok = await sendStatusUpdate(id, 'approved', getOfficerInfo(), '');
             if (ok) setTimeout(() => loadReports(), 300);
         };
 
-        window.rejectReport = async (id, discordMsgId) => {
+        window.rejectReport = async (id) => {
             const reason = prompt('Укажите причину ОТКЛОНЕНИЯ (обязательно):');
             if (!reason || !reason.trim()) return;
 
-            const ok = await sendStatusUpdate({
-                id: id,
-                status: 'rejected',
-                processed_by: getOfficerInfo(),
-                reject_reason: reason.trim()
-            });
-
+            const ok = await sendStatusUpdate(id, 'rejected', getOfficerInfo(), reason.trim());
             if (ok) setTimeout(() => loadReports(), 300);
         };
 
-        window.reviewReport = async (id, discordMsgId) => {
+        window.reviewReport = async (id) => {
             if (!confirm('Внимание: Вы открываете дело на пересмотр. Рапорт будет ОДОБРЕН. Продолжить?')) return;
 
-            const ok = await sendStatusUpdate({
-                id: id,
-                status: 'approved',
-                processed_by: getOfficerInfo() + ' (Пересмотр)',
-                reject_reason: ''
-            });
-
+            const ok = await sendStatusUpdate(id, 'approved', getOfficerInfo() + ' (Пересмотр)', '');
             if (ok) setTimeout(() => loadReports(), 300);
         };
 
