@@ -260,7 +260,6 @@
                     <div class="form-group"><label style="color: #f87171;">Статик нарушителя</label><input type="text" id="violator-static" required oninput="checkViolatorHistory()"></div>
                 </div>
                 
-                <!-- Блок подсказки по рецидивам и истории прямо в форме -->
                 <div id="violator-history-hint" class="hidden" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px 12px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #f87171;">
                     ⚠️ <span id="violator-history-text">У этого нарушителя уже есть прошлые рапорты!</span>
                 </div>
@@ -673,11 +672,12 @@
             const { data, error } = await supabaseClient
                 .from('reports')
                 .select('id, nomenclature, report_type, created_at')
-                .eq('violator_static', violatorStatic);
+                .eq('violator_static', violatorStatic)
+                .eq('status', 'approved'); // Учитываем только одобренные рапорты для рецидива
 
             if (!error && data && data.length > 0) {
                 hintBox.classList.remove('hidden');
-                hintText.innerHTML = `Внимание! У статика <b>${violatorStatic}</b> обнаружено прошлых нарушений: <b>${data.length}</b> (Рецидив)`;
+                hintText.innerHTML = `Внимание! У статика <b>${violatorStatic}</b> обнаружено одобренных рапортов: <b>${data.length}</b> (Рецидив)`;
             } else {
                 hintBox.classList.add('hidden');
             }
@@ -695,16 +695,18 @@
             const violatorStaticInput = document.getElementById('violator-static').value.trim();
 
             try {
-                // Считаем количество прошлых нарушений для формирования информации о рецидиве в деталях
+                // Считаем количество прошлых ОДОБРЕННЫХ нарушений для рецидива
                 const { data: pastReports } = await supabaseClient
                     .from('reports')
                     .select('id')
-                    .eq('violator_static', violatorStaticInput);
+                    .eq('violator_static', violatorStaticInput)
+                    .eq('status', 'approved');
 
                 const recidivismCount = (pastReports ? pastReports.length : 0) + 1;
-                const detailsText = document.getElementById('report-desc').value.trim() + (recidivismCount > 1 ? `\n\n⚠️ [Система]: Нарушение по счету #${recidivismCount} (Рецидив)` : '');
+                const baseDesc = document.getElementById('report-desc').value.trim();
+                const detailsText = baseDesc + (pastReports && pastReports.length > 0 ? `\n\n⚠️ [Система]: Нарушение по счету #${recidivismCount} (Рецидив)` : '');
 
-                // Прямая запись в таблицу Supabase (поле nomenclature заполнится автоматически через SQL-триггер)
+                // Прямая запись в таблицу Supabase (поле nomenclature сгенерируется триггером базы данных)
                 const { data: insertedData, error } = await supabaseClient.from('reports').insert([{
                     author_name: document.getElementById('author-name').value.trim(),
                     author_static: document.getElementById('author-static').value.trim(),
