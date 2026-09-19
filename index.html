@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SANG | Military Police Terminal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; }
         
@@ -369,7 +368,6 @@
     <script>
         const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzcPjfFTIwB7bunNR1lluyYj7f0ypjfu5wzIcF3cgLJbRYEec4Md93GQXIt3fBpknl_1A/exec';
         
         const CONFIG = {
             NOMENCLATURE_MAP: {
@@ -454,6 +452,18 @@
         let allLoadedReports = []; 
         let pendingFactorId = null; 
         let currentEnrollFactorId = null;
+
+        // Вспомогательная функция вызова Supabase Edge Function
+        async function callEdgeFunction(payload) {
+            const { data, error } = await supabaseClient.functions.invoke('discord-reports', {
+                body: payload
+            });
+
+            if (error) {
+                throw new Error(error.message || 'Ошибка вызова Edge Function');
+            }
+            return data;
+        }
 
         function switchPanel(panelId) {
             ['hero-welcome', 'dashboard-panel', 'reports-panel'].forEach(id => {
@@ -621,13 +631,12 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        // ИДЕАЛЬНО БЕСШОВНАЯ ОТПРАВКА РАПОРТА (С ЗАЩИТОЙ ОТ ТАЙМ-АУТОВ)
+        // ПОДАЧА РАПОРТА (ЧЕРЕЗ SUPABASE EDGE FUNCTION)
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); 
             const msg = document.getElementById('report-status-msg');
             
-            // Блокируем кнопку во избежание дубликатов
             btn.disabled = true; 
             btn.innerText = 'Обработка данных...';
 
@@ -644,25 +653,9 @@
             };
 
             try {
-                const response = await fetch(GAS_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
+                const resData = await callEdgeFunction(payload);
 
-                const rawText = await response.text();
-                let resData;
-                
-                try {
-                    resData = JSON.parse(rawText);
-                } catch (parseErr) {
-                    // ЕСЛИ СРАБОТАЛ ТАЙМ-АУТ ОТВЕТА, НО ДАННЫЕ В ФОНЕ УСПЕШНО ДОШЛИ ДО БАЗЫ И DISCORD:
-                    console.warn('Сервер ответил с задержкой (возможен тайм-аут JSON), но запрос выполнен:', rawText);
-                    resData = { status: 'success', nomenclature: 'SANG-MP/REPORT (Успешно)' };
-                }
-
-                if (resData.status === 'success') {
+                if (resData && resData.status === 'success') {
                     msg.innerHTML = `✅ Рапорт успешно зарегистрирован${resData.nomenclature ? ': <b>' + resData.nomenclature + '</b>' : ''}`; 
                     msg.style.color = '#34d399'; 
                     setTimeout(() => { 
@@ -671,15 +664,13 @@
                         if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
                     }, 1200);
                 } else {
-                    throw new Error(resData.message || 'Ошибка обработки скриптом');
+                    throw new Error((resData && resData.message) || 'Ошибка обработки');
                 }
 
             } catch (err) {
-                // Если произошел реальный сетевой сбой связи
                 msg.innerHTML = '❌ Ошибка при отправке: ' + err.message; 
                 msg.style.color = '#f87171';
             } finally {
-                // В любом случае возвращаем кнопку в рабочее состояние
                 btn.disabled = false; 
                 btn.innerText = 'Зафиксировать рапорт';
             }
@@ -774,39 +765,25 @@
 
         const getOfficerInfo = () => currentUserData ? `${currentUserData.full_name} (${currentUserData.static})` : 'Офицер MP';
 
-        async function sendStatusUpdateToGAS(payload) {
+        async function sendStatusUpdate(payload) {
             try {
-                const response = await fetch(GAS_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const rawText = await response.text();
-                let result;
-                try {
-                    result = JSON.parse(rawText);
-                } catch (parseErr) {
-                    return true; // Считаем успешным при задержке ответа, если бэкенд отработал
-                }
-
-                if (result.status === 'success') {
+                const result = await callEdgeFunction(payload);
+                if (result && result.status === 'success') {
                     return true;
                 } else {
-                    alert('Ошибка обновления статуса: ' + (result.message || 'Неизвестная ошибка'));
+                    alert('Ошибка обновления статуса: ' + (result?.message || 'Неизвестная ошибка'));
                     return false;
                 }
             } catch (err) {
-                console.error(err);
-                return true; // Мягкий проход при задержках сети
+                alert('Ошибка связи с сервером: ' + err.message);
+                return false;
             }
         }
 
         window.approveReport = async (id, discordMsgId) => {
             if (!confirm('Подтверждаете ОДОБРЕНИЕ рапорта?')) return;
             
-            await sendStatusUpdateToGAS({
+            await sendStatusUpdate({
                 action: 'update_status',
                 id: id,
                 discord_message_id: discordMsgId,
@@ -822,7 +799,7 @@
             const reason = prompt('Укажите причину ОТКЛОНЕНИЯ (обязательно):');
             if (!reason) return;
 
-            await sendStatusUpdateToGAS({
+            await sendStatusUpdate({
                 action: 'update_status',
                 id: id,
                 discord_message_id: discordMsgId,
@@ -837,7 +814,7 @@
         window.reviewReport = async (id, discordMsgId) => {
             if (!confirm('Внимание: Вы открываете дело на пересмотр. Рапорт будет ОДОБРЕН. Продолжить?')) return;
 
-            await sendStatusUpdateToGAS({
+            await sendStatusUpdate({
                 action: 'update_status',
                 id: id,
                 discord_message_id: discordMsgId,
