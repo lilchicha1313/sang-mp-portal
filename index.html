@@ -463,17 +463,6 @@
                 .replace(/'/g, '&#039;');
         }
 
-        async function callEdgeFunction(payload) {
-            const { data, error } = await supabaseClient.functions.invoke('discord-reports', {
-                body: payload
-            });
-
-            if (error) {
-                throw new Error(error.message || 'Ошибка вызова Edge Function');
-            }
-            return data;
-        }
-
         function switchPanel(panelId) {
             ['hero-welcome', 'dashboard-panel', 'reports-panel'].forEach(id => {
                 const el = document.getElementById(id);
@@ -673,31 +662,32 @@
             btn.innerText = 'Обработка данных...';
 
             const rawType = document.getElementById('report-type').value;
-            const payload = {
-                action: 'create_report',
-                author_name: document.getElementById('author-name').value.trim(),
-                author_static: document.getElementById('author-static').value.trim(),
-                author_discord_id: document.getElementById('author-discord-id').value.trim(),
-                violator_static: document.getElementById('violator-static').value.trim(),
-                report_type: CONFIG.NOMENCLATURE_MAP[rawType] || rawType,
-                details: document.getElementById('report-desc').value.trim(),
-                evidence: document.getElementById('report-proof').value.trim()
-            };
+            // Генерация номенклатуры прямо в браузере (замена Edge Function)
+            const localNomenclature = 'MP-' + Math.floor(100000 + Math.random() * 900000);
 
             try {
-                const resData = await callEdgeFunction(payload);
+                // Прямая запись в таблицу Supabase
+                const { error } = await supabaseClient.from('reports').insert([{
+                    author_name: document.getElementById('author-name').value.trim(),
+                    author_static: document.getElementById('author-static').value.trim(),
+                    author_discord_id: document.getElementById('author-discord-id').value.trim(),
+                    violator_static: document.getElementById('violator-static').value.trim(),
+                    report_type: CONFIG.NOMENCLATURE_MAP[rawType] || rawType,
+                    details: document.getElementById('report-desc').value.trim(),
+                    evidence: document.getElementById('report-proof').value.trim(),
+                    status: 'pending',
+                    nomenclature: localNomenclature
+                }]);
 
-                if (resData && resData.status === 'success') {
-                    msg.innerHTML = `✅ Рапорт успешно зарегистрирован${resData.nomenclature ? ': <b>' + escapeHTML(resData.nomenclature) + '</b>' : ''}`; 
-                    msg.style.color = '#34d399'; 
-                    setTimeout(() => { 
-                        closeModal('report-modal'); 
-                        document.getElementById('report-form').reset(); 
-                        if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
-                    }, 1200);
-                } else {
-                    throw new Error((resData && resData.message) || 'Ошибка обработки');
-                }
+                if (error) throw error;
+
+                msg.innerHTML = `✅ Рапорт успешно зарегистрирован: <b>${escapeHTML(localNomenclature)}</b>`; 
+                msg.style.color = '#34d399'; 
+                setTimeout(() => { 
+                    closeModal('report-modal'); 
+                    document.getElementById('report-form').reset(); 
+                    if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
+                }, 1200);
 
             } catch (err) {
                 msg.innerHTML = '❌ Ошибка при отправке: ' + escapeHTML(err.message); 
@@ -805,15 +795,20 @@
 
         async function sendStatusUpdate(payload) {
             try {
-                const result = await callEdgeFunction(payload);
-                if (result && result.status === 'success') {
-                    return true;
-                } else {
-                    alert('Ошибка обновления статуса: ' + (result?.message || 'Неизвестная ошибка'));
-                    return false;
-                }
+                // Прямое обновление статуса в таблице Supabase
+                const { error } = await supabaseClient
+                    .from('reports')
+                    .update({ 
+                        status: payload.status, 
+                        processed_by: payload.processed_by, 
+                        reject_reason: payload.reject_reason 
+                    })
+                    .eq('id', payload.id);
+                    
+                if (error) throw error;
+                return true;
             } catch (err) {
-                alert('Ошибка связи с сервером: ' + err.message);
+                alert('Ошибка связи с базой данных: ' + err.message);
                 return false;
             }
         }
@@ -822,9 +817,7 @@
             if (!confirm('Подтверждаете ОДОБРЕНИЕ рапорта?')) return;
             
             const ok = await sendStatusUpdate({
-                action: 'update_status',
                 id: id,
-                discord_message_id: discordMsgId,
                 status: 'approved',
                 processed_by: getOfficerInfo(),
                 reject_reason: ''
@@ -838,9 +831,7 @@
             if (!reason || !reason.trim()) return;
 
             const ok = await sendStatusUpdate({
-                action: 'update_status',
                 id: id,
-                discord_message_id: discordMsgId,
                 status: 'rejected',
                 processed_by: getOfficerInfo(),
                 reject_reason: reason.trim()
@@ -853,9 +844,7 @@
             if (!confirm('Внимание: Вы открываете дело на пересмотр. Рапорт будет ОДОБРЕН. Продолжить?')) return;
 
             const ok = await sendStatusUpdate({
-                action: 'update_status',
                 id: id,
-                discord_message_id: discordMsgId,
                 status: 'approved',
                 processed_by: getOfficerInfo() + ' (Пересмотр)',
                 reject_reason: ''
