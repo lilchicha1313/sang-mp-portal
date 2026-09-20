@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SANG | Military Police Terminal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; }
         
@@ -289,7 +290,7 @@
             <button class="close-btn" onclick="closeModal('mfa-setup-modal')">&times;</button>
             <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;">Привязка Google Authenticator</h2>
             <p style="font-size: 13px; color: var(--text-muted);">Отсканируйте этот QR-код через приложение на смартфоне:</p>
-            <div id="mfa-qr-code" style="margin: 20px 0;"></div>
+            <div id="mfa-qr-code" style="margin: 20px 0; display: flex; justify-content: center;"></div>
             <p style="font-size: 11px; color: var(--text-muted);">Или введите ключ вручную: <code id="mfa-secret-key" style="color: #60a5fa; font-size: 13px;">-</code></p>
             <form id="mfa-verify-enroll-form" style="margin-top: 20px; text-align: left;">
                 <div class="form-group"><label>Первый 6-значный код из приложения</label><input type="text" id="mfa-enroll-code" placeholder="000000" maxlength="6" style="font-size: 18px; letter-spacing: 3px; text-align: center;" required></div>
@@ -390,6 +391,66 @@
             document.querySelectorAll('#status-msg, #report-status-msg, #mfa-setup-msg').forEach(msg => msg.innerText = '');
         };
 
+        // НАСТРОЙКА И АКТИВАЦИЯ 2FA (MFA)
+        window.initMFAEnrollment = async function() {
+            const msg = document.getElementById('mfa-setup-msg');
+            msg.innerText = 'Генерация ключа...';
+            try {
+                const { data, error } = await supabaseClient.auth.mfa.enroll({
+                    factorType: 'totp',
+                    issuer: 'SANG MP Terminal',
+                    friendlyName: currentUserData ? `${currentUserData.full_name} (${currentUserData.static})` : 'Officer'
+                });
+                if (error) throw error;
+                currentEnrollFactorId = data.id;
+                document.getElementById('mfa-secret-key').innerText = data.totp.secret;
+                
+                const qrContainer = document.getElementById('mfa-qr-code');
+                qrContainer.innerHTML = '';
+                const canvas = document.createElement('canvas');
+                QRCode.toCanvas(canvas, data.totp.uri, { width: 180, margin: 1 }, function (err) {
+                    if (err) console.error(err);
+                });
+                qrContainer.appendChild(canvas);
+                openModal('mfa-setup-modal');
+                msg.innerText = '';
+            } catch (err) {
+                msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message);
+                msg.style.color = '#f87171';
+            }
+        };
+
+        document.getElementById('mfa-verify-enroll-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('mfa-enroll-code').value.trim();
+            const msg = document.getElementById('mfa-setup-msg');
+            const btn = document.getElementById('mfa-enroll-submit-btn');
+            btn.disabled = true; btn.innerText = 'Проверка...';
+            try {
+                const { data: challengeData, error: challengeError } = await supabaseClient.auth.mfa.challenge({ factorId: currentEnrollFactorId });
+                if (challengeError) throw challengeError;
+                
+                const { data: verifyData, error: verifyError } = await supabaseClient.auth.mfa.verify({
+                    factorId: currentEnrollFactorId,
+                    challengeId: challengeData.id,
+                    code: code
+                });
+                if (verifyError) throw verifyError;
+                
+                msg.innerHTML = '✅ 2FA успешно активирована!';
+                msg.style.color = '#34d399';
+                setTimeout(() => {
+                    closeModal('mfa-setup-modal');
+                    location.reload();
+                }, 1200);
+            } catch (err) {
+                msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message);
+                msg.style.color = '#f87171';
+            } finally {
+                btn.disabled = false; btn.innerText = 'Активировать защиту';
+            }
+        };
+
         // ОТКРЫТИЕ ДОСЬЕ
         window.openDossier = (id) => {
             const report = allLoadedReports.find(r => r.id === id);
@@ -477,19 +538,70 @@
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
 
-        // Авторизация
+        // Авторизация и проверка 2FA
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-submit-btn'); const msg = document.getElementById('status-msg');
             btn.disabled = true; btn.innerText = 'Подключение...'; msg.innerText = '';
             try {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('login-static').value.trim(), password: document.getElementById('login-password').value });
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ 
+                    email: document.getElementById('login-static').value.trim(), 
+                    password: document.getElementById('login-password').value 
+                });
                 if (error) throw error;
+
+                // Проверяем наличие MFA (AAL2)
+                const { data: aalData, error: aalError } = await supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
+                if (!aalError && aalData && aalData.nextLevel === 'aal2' && aalData.nextLevel > aalData.currentLevel) {
+                    const { data: factorsData, error: factorsError } = await supabaseClient.auth.mfa.listFactors();
+                    if (!factorsError && factorsData && factorsData.totp && factorsData.totp.length > 0) {
+                        pendingFactorId = factorsData.totp[0].id;
+                        document.getElementById('auth-form').classList.add('hidden');
+                        document.getElementById('mfa-challenge-form').classList.remove('hidden');
+                        document.getElementById('auth-modal-title').innerText = 'Подтверждение 2FA';
+                        msg.innerHTML = '⚠️ Требуется код аутентификатора';
+                        msg.style.color = '#fbbf24';
+                        return;
+                    }
+                }
+
                 msg.innerHTML = '✅ Доступ разрешен'; msg.style.color = '#34d399'; 
                 setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 800); 
             } catch (err) {
                 msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message); msg.style.color = '#f87171';
             } finally { btn.disabled = false; btn.innerText = 'Подключиться к БД'; }
+        };
+
+        document.getElementById('mfa-challenge-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('mfa-code-input').value.trim();
+            const msg = document.getElementById('status-msg');
+            const btn = document.getElementById('mfa-submit-btn');
+            btn.disabled = true; btn.innerText = 'Проверка...';
+            try {
+                const { data: challengeData, error: challengeError } = await supabaseClient.auth.mfa.challenge({ factorId: pendingFactorId });
+                if (challengeError) throw challengeError;
+
+                const { data: verifyData, error: verifyError } = await supabaseClient.auth.mfa.verify({
+                    factorId: pendingFactorId,
+                    challengeId: challengeData.id,
+                    code: code
+                });
+                if (verifyError) throw verifyError;
+
+                msg.innerHTML = '✅ Доступ разрешен';
+                msg.style.color = '#34d399';
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                setTimeout(() => { 
+                    closeModal('auth-modal'); 
+                    loadProfile(user); 
+                }, 800);
+            } catch (err) {
+                msg.innerHTML = '❌ Ошибка кода: ' + escapeHTML(err.message);
+                msg.style.color = '#f87171';
+            } finally {
+                btn.disabled = false; btn.innerText = 'Подтвердить личность';
+            }
         };
 
         async function loadProfile(user) {
@@ -521,7 +633,7 @@
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
-        async function checkViolatorHistory() {
+        window.checkViolatorHistory = async function() {
             const violatorStatic = document.getElementById('violator-static').value.trim();
             const hintBox = document.getElementById('violator-history-hint');
             const hintText = document.getElementById('violator-history-text');
@@ -530,11 +642,11 @@
             const { data, error } = await supabaseClient.from('reports').select('id, nomenclature, report_type, details, created_at').eq('violator_static', violatorStatic).eq('status', 'approved');
             if (!error && data && data.length > 0) {
                 hintBox.classList.remove('hidden');
-                let summaryHTML = `Внимание! У статика <b>${violatorStatic}</b> рецидив — одобренных нарушений: <b>${data.length}</b><br>`;
-                data.forEach((rep, idx) => { summaryHTML += `&bull; #${idx + 1} <b>[${rep.nomenclature}]</b>: ${rep.report_type}<br>`; });
+                let summaryHTML = `Внимание! У статика <b>${escapeHTML(violatorStatic)}</b> рецидив — одобренных нарушений: <b>${data.length}</b><br>`;
+                data.forEach((rep, idx) => { summaryHTML += `&bull; #${idx + 1} <b>[${escapeHTML(rep.nomenclature)}]</b>: ${escapeHTML(rep.report_type)}<br>`; });
                 hintText.innerHTML = summaryHTML;
             } else { hintBox.classList.add('hidden'); }
-        }
+        };
 
         // Отправка рапорта
         document.getElementById('report-form').onsubmit = async (e) => {
@@ -583,21 +695,26 @@
                 if (insertErr) throw insertErr;
 
                 msg.innerHTML = `✅ Рапорт зарегистрирован: <b>${escapeHTML(assignedNomenclature)}</b>`; msg.style.color = '#34d399'; 
-                setTimeout(() => { closeModal('report-modal'); document.getElementById('report-form').reset(); document.getElementById('violator-history-hint').classList.add('hidden'); if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports(); }, 1500);
+                setTimeout(() => { 
+                    closeModal('report-modal'); 
+                    document.getElementById('report-form').reset(); 
+                    document.getElementById('violator-history-hint').classList.add('hidden'); 
+                    if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports(); 
+                }, 1500);
             } catch (err) {
                 msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message); msg.style.color = '#f87171';
             } finally { btn.disabled = false; btn.innerText = 'Зафиксировать рапорт'; }
         };
 
-        async function loadReports() {
+        window.loadReports = async function() {
             const tbody = document.getElementById('reports-table-body');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Синхронизация...</td></tr>';
             const { data: reports, error } = await supabaseClient.from('reports').select('*').order('created_at', { ascending: false });
             if (error || !reports) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: #f87171;">Ошибка загрузки</td></tr>'; return; }
             allLoadedReports = reports; renderReportsTable(allLoadedReports);
-        }
+        };
 
-        function filterReports() {
+        window.filterReports = function() {
             const query = document.getElementById('report-search-input').value.toLowerCase().trim();
             if (!query) return renderReportsTable(allLoadedReports);
             const filtered = allLoadedReports.filter(r => 
@@ -608,7 +725,7 @@
                 (r.report_type && r.report_type.toLowerCase().includes(query))
             );
             renderReportsTable(filtered);
-        }
+        };
 
         function renderReportsTable(reports) {
             const tbody = document.getElementById('reports-table-body');
