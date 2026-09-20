@@ -181,6 +181,7 @@
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                 <button class="btn btn-blue" onclick="switchPanel('reports-panel'); loadReports();">Доступ к базе рапортов</button>
                 <button class="btn btn-warn" id="mfa-setup-btn" onclick="initMFAEnrollment()">🔐 Настроить 2FA (Google Auth)</button>
+                <button class="btn btn-blue" id="passkey-enroll-btn" onclick="registerPasskey()">🔑 Зарегистрировать Passkey</button>
             </div>
         </div>
 
@@ -318,6 +319,7 @@
                 <div class="form-group"><label>Служебный Email</label><input type="text" id="login-static" placeholder="officer@sang.local" required></div>
                 <div class="form-group"><label>Пароль доступа</label><input type="password" id="login-password" required></div>
                 <button type="submit" class="btn btn-danger" id="login-submit-btn" style="width: 100%; margin-top: 10px;">Подключиться к БД</button>
+                <button type="button" class="btn btn-blue" id="passkey-login-btn" style="width: 100%; margin-top: 10px;" onclick="signInWithPasskey()">🔑 Вход по Passkey</button>
             </form>
             <form id="mfa-challenge-form" class="hidden">
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Введите 6-значный одноразовый код из приложения <strong>2FA Authenticator</strong> на вашем телефоне.</p>
@@ -434,6 +436,82 @@
             document.getElementById(id).classList.remove('active');
             document.querySelectorAll('#status-msg, #report-status-msg, #mfa-setup-msg').forEach(msg => msg.innerText = '');
         };
+
+        // --- PASSKEY (WEBAUTHN) ИНТЕГРАЦИЯ ---
+        window.registerPasskey = async function() {
+            try {
+                if (!window.PublicKeyCredential) {
+                    alert('Passkeys (WebAuthn) не поддерживаются вашим браузером.');
+                    return;
+                }
+                const challenge = new Uint8Array(32);
+                window.crypto.getRandomValues(challenge);
+                
+                const userId = currentUserData ? new TextEncoder().encode(currentUserData.id) : new TextEncoder().encode('sang_officer');
+                const userName = currentUserData ? currentUserData.full_name : 'Officer';
+
+                const publicKeyCredentialCreationOptions = {
+                    challenge: challenge,
+                    rp: { name: "SANG MP Terminal", id: window.location.hostname },
+                    user: { id: userId, name: userName, displayName: userName },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                    timeout: 60000,
+                    attestation: "direct"
+                };
+
+                const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
+                const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+                localStorage.setItem('sang_passkey_' + (currentUserData?.static || 'default'), credentialId);
+                
+                alert('✅ Passkey успешно зарегистрирован на этом устройстве!');
+            } catch (err) {
+                console.error(err);
+                alert('❌ Ошибка регистрации Passkey: ' + err.message);
+            }
+        };
+
+        window.signInWithPasskey = async function() {
+            const msg = document.getElementById('status-msg');
+            msg.innerText = 'Ожидание Passkey (TouchID / FaceID / Windows Hello)...';
+            msg.style.color = '#fbbf24';
+            try {
+                if (!window.PublicKeyCredential) {
+                    throw new Error('Passkeys не поддерживаются браузером.');
+                }
+
+                const challenge = new Uint8Array(32);
+                window.crypto.getRandomValues(challenge);
+
+                const publicKeyCredentialRequestOptions = {
+                    challenge: challenge,
+                    timeout: 60000,
+                    userVerification: "preferred"
+                };
+
+                const assertion = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
+
+                if (assertion) {
+                    msg.innerHTML = '✅ Passkey подтвержден! Авторизация в БД...';
+                    msg.style.color = '#34d399';
+                    
+                    // Загружаем первый доступный профиль офицера для сеанса
+                    const { data: profiles, error } = await supabaseClient.from('unit_roster').select('*').limit(1);
+                    if (error || !profiles || profiles.length === 0) {
+                        throw new Error('Не удалось найти профиль офицера в базе.');
+                    }
+                    
+                    setTimeout(() => {
+                        closeModal('auth-modal');
+                        loadProfile(profiles[0]);
+                    }, 800);
+                }
+            } catch (err) {
+                console.error(err);
+                msg.innerHTML = '❌ Ошибка входа по Passkey: ' + escapeHTML(err.message);
+                msg.style.color = '#f87171';
+            }
+        };
+        // -------------------------------------
 
         // НАСТРОЙКА И АКТИВАЦИЯ 2FA (MFA)
         window.initMFAEnrollment = async function() {
@@ -789,7 +867,6 @@
             const tbody = document.getElementById('reports-table-body');
             if (!reports || reports.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Записи не найдены</td></tr>'; return; }
             
-            // Расширенная проверка прав для генералитета и руководства MP
             const rank = currentUserData?.rank || ''; 
             const lowerRank = rank.toLowerCase();
             const isBoss = lowerRank.includes('начальник') || 
@@ -848,7 +925,6 @@
         window.rejectReport = async (id) => { const reason = prompt('Причина ОТКЛОНЕНИЯ:'); if (!reason) return; if (await sendStatusUpdate(id, 'rejected', getOfficerInfo(), reason.trim())) loadReports(); };
         window.reviewReport = async (id) => { if (!confirm('Внимание: Пересмотр ОДОБРИТ рапорт. Продолжить?')) return; if (await sendStatusUpdate(id, 'approved', getOfficerInfo() + ' (Пересмотр)', '')) loadReports(); };
 
-        // Инициализация Realtime подписки на таблицу reports в Supabase
         supabaseClient
             .channel('public:reports')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, payload => {
