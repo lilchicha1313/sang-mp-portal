@@ -668,7 +668,6 @@
                 return;
             }
 
-            // Учитываем ТОЛЬКО одобренные рапорты (.eq('status', 'approved'))
             const { data, error } = await supabaseClient
                 .from('reports')
                 .select('id, nomenclature, report_type, details, created_at')
@@ -679,7 +678,7 @@
                 hintBox.classList.remove('hidden');
                 let summaryHTML = `Внимание! У статика <b>${violatorStatic}</b> обнаружен рецидив — одобренных нарушений: <b>${data.length}</b><br>`;
                 data.forEach((rep, idx) => {
-                    summaryHTML += `&bull; #${idx + 1} <b>[${rep.nomenclature}]</b>: ${rep.report_type}<br>`;
+                    summaryHTML += `&bull; #${idx + 1} <b>[${rep.nomenclature}]</b>:${rep.report_type}<br>`;
                 });
                 hintText.innerHTML = summaryHTML;
             } else {
@@ -711,7 +710,6 @@
                 const nextReportNum = (myReports ? myReports.length : 0) + 1;
                 const assignedNomenclature = `SANG-MP/REPORT-${authorStatic}/${nextReportNum}`;
 
-                // Получаем прошлые ОДОБРЕННЫЕ нарушения (отклоненные не учитываются)
                 const { data: pastReports } = await supabaseClient
                     .from('reports')
                     .select('nomenclature, report_type, details')
@@ -723,24 +721,13 @@
 
                 if (pastReports && pastReports.length > 0) {
                     let historyLines = [];
-                    historyLines.push(`[⚠️ СИСТЕМА: ИСТОРИЯ РЕЦИДИВОВ — Всего нарушений: ${pastReports.length}]`);
-                    historyLines.push(`==============================`);
+                    historyLines.push(`⚠️ Внимание! У статика ${violatorStaticInput} обнаружен рецидив — одобренных нарушений: ${pastReports.length}`);
                     
                     pastReports.forEach((rep, index) => {
-                        // Очищаем историю от предыдущих рецидивов, чтобы избежать дублирования
-                        let cleanDetails = rep.details || 'Н/Д';
-                        if (cleanDetails.includes('Суть текущего нарушения:')) {
-                            // Берем только тот текст, который идет после маркера текущего нарушения
-                            cleanDetails = cleanDetails.split('Суть текущего нарушения:').pop().trim();
-                        }
-
-                        historyLines.push(`Нарушение #${index + 1}:`);
-                        historyLines.push(`• Номенклатура: ${rep.nomenclature || 'SANG-MP/REPORT-...'}`);
-                        historyLines.push(`• Статья: ${rep.report_type || 'Н/Д'}`);
-                        historyLines.push(`• Суть нарушения: ${cleanDetails}`);
-                        historyLines.push(`------------------------------`);
+                        historyLines.push(`• #${index + 1} [${rep.nomenclature \vert{}\vert{} 'Н/Д'}]: ${rep.report_type || 'Н/Д'}`);
                     });
                     
+                    historyLines.push(``);
                     historyLines.push(`Суть текущего нарушения:`);
                     historyLines.push(baseDesc);
 
