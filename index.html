@@ -668,7 +668,6 @@
                 return;
             }
 
-            // Учитываем ТОЛЬКО одобренные рапорты (.eq('status', 'approved'))
             const { data, error } = await supabaseClient
                 .from('reports')
                 .select('id, nomenclature, report_type, details, created_at')
@@ -711,7 +710,6 @@
                 const nextReportNum = (myReports ? myReports.length : 0) + 1;
                 const assignedNomenclature = `SANG-MP/REPORT-${authorStatic}/${nextReportNum}`;
 
-                // Получаем прошлые ОДОБРЕННЫЕ нарушения (отклоненные не учитываются)
                 const { data: pastReports } = await supabaseClient
                     .from('reports')
                     .select('nomenclature, report_type, details')
@@ -727,10 +725,8 @@
                     historyLines.push(`==============================`);
                     
                     pastReports.forEach((rep, index) => {
-                        // Очищаем историю от предыдущих рецидивов, чтобы избежать дублирования
                         let cleanDetails = rep.details || 'Н/Д';
                         if (cleanDetails.includes('Суть текущего нарушения:')) {
-                            // Берем только тот текст, который идет после маркера текущего нарушения
                             cleanDetails = cleanDetails.split('Суть текущего нарушения:').pop().trim();
                         }
 
