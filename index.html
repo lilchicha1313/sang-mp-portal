@@ -383,7 +383,7 @@
             </div>
 
             <div id="dossier-history-section" class="hidden" style="margin-top: 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 6px;">
-                <div class="dossier-label" style="color: #60a5fa; margin-bottom: 10px;">Связанные рапорты</div>
+                <div class="dossier-label" style="color: #60a5fa; margin-bottom: 10px;">Связанные рапорты нарушителя</div>
                 <div id="dossier-history-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
             </div>
             
@@ -414,7 +414,7 @@
             <form id="report-form">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group"><label>Ваше Имя (IC)</label><input type="text" id="author-name" required></div>
-                    <div class="form-group"><label>Ваш Статик</label><input type="text" id="author-static" required oninput="checkViolatorHistory()"></div>
+                    <div class="form-group"><label>Ваш Статик</label><input type="text" id="author-static" required></div>
                 </div>
                 <div class="form-group"><label>Ваш Discord ID</label><input type="text" id="author-discord-id"></div>
                 
@@ -503,6 +503,34 @@
             document.getElementById(id).classList.remove('active');
             document.querySelectorAll('#status-msg, #report-status-msg, #act-status-msg').forEach(msg => msg.innerText = '');
         };
+
+        // --- ЭКСПОРТ БЭКАПА ДАННЫХ В JSON ---
+        window.exportReportsJSON = function() {
+            if (!allLoadedReports || allLoadedReports.length === 0) {
+                alert('Нет данных для экспорта');
+                return;
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allLoadedReports, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `SANG_MP_Reports_Backup_${new Date().toISOString().slice(0, 10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        };
+
+        // --- REALTIME СИНХРОНИЗАЦИЯ С SUPABASE ---
+        function initRealtime() {
+            supabaseClient
+                .channel('public:reports')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => loadReports())
+                .subscribe();
+
+            supabaseClient
+                .channel('public:local_acts')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'local_acts' }, () => loadActs())
+                .subscribe();
+        }
 
         // --- ЛОКАЛЬНЫЕ АКТЫ (ЗАГРУЗКА И ВЫВОД) ---
         window.loadActs = async function() {
@@ -718,9 +746,9 @@
             }
         };
 
-        // --- ДОСЬЕ ---
+        // --- DOSSIER (ОТКРЫТИЕ И ИСТОРИЯ) ---
         window.openDossier = (id) => {
-            const report = allLoadedReports.find(r => r.id === id);
+            const report = allLoadedReports.find(r => String(r.id) === String(id));
             if (!report) return;
 
             document.getElementById('dossier-nomenclature').innerText = report.nomenclature || 'SANG-MP/REPORT';
@@ -750,6 +778,24 @@
                 processedBy.innerHTML = `Резолюцию вынес: <span style="color: #f87171;">${escapeHTML(report.processed_by || 'Офицер')}</span>`;
             } else {
                 statusBadge.innerHTML = '<span class="badge badge-pending" style="font-size: 14px; padding: 8px 15px;">🟡 НА РАССМОТРЕНИИ</span>';
+            }
+
+            // Связанные рапорты (История нарушителя)
+            const historySec = document.getElementById('dossier-history-section');
+            const historyList = document.getElementById('dossier-history-list');
+            const related = allLoadedReports.filter(r => String(r.violator_static) === String(report.violator_static) && String(r.id) !== String(report.id));
+
+            if (related.length > 0) {
+                historySec.classList.remove('hidden');
+                historyList.innerHTML = related.map(rel => {
+                    const statusClass = rel.status === 'approved' ? 'color:#34d399;' : (rel.status === 'rejected' ? 'color:#f87171;' : 'color:#fbbf24;');
+                    return `<div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:4px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+                        <span><b>${escapeHTML(rel.nomenclature || 'Б/Н')}</b> — ${escapeHTML(rel.report_type || 'Запись')}</span>
+                        <span style="${statusClass} font-weight:bold;">${rel.status.toUpperCase()}</span>
+                    </div>`;
+                }).join('');
+            } else {
+                historySec.classList.add('hidden');
             }
 
             openModal('dossier-modal');
@@ -943,8 +989,10 @@
         }
 
         window.approveReport = async (id) => { if (!confirm('ОДОБРИТЬ рапорт?')) return; if (await sendStatusUpdate(id, 'approved', getOfficerInfo(), '')) loadReports(); };
-        window.rejectReport = async (id) => { const reason = prompt('Причина ОТКЛОНЕГИЯ:'); if (!reason) return; if (await sendStatusUpdate(id, 'rejected', getOfficerInfo(), reason.trim())) loadReports(); };
+        window.rejectReport = async (id) => { const reason = prompt('Причина ОТКЛОНЕНИЯ:'); if (!reason) return; if (await sendStatusUpdate(id, 'rejected', getOfficerInfo(), reason.trim())) loadReports(); };
 
+        // ИНИЦИАЛИЗАЦИЯ
+        initRealtime();
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
     </script>
 </body>
