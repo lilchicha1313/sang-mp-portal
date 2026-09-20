@@ -724,13 +724,16 @@
                 if (!aalError && aalData && aalData.nextLevel === 'aal2' && aalData.nextLevel > aalData.currentLevel) {
                     const { data: factorsData, error: factorsError } = await supabaseClient.auth.mfa.listFactors();
                     if (!factorsError && factorsData && factorsData.totp && factorsData.totp.length > 0) {
-                        pendingFactorId = factorsData.totp[0].id;
-                        document.getElementById('auth-form').classList.add('hidden');
-                        document.getElementById('mfa-challenge-form').classList.remove('hidden');
-                        document.getElementById('auth-modal-title').innerText = 'Подтверждение 2FA';
-                        msg.innerHTML = '⚠️ Требуется код аутентификатора';
-                        msg.style.color = '#fbbf24';
-                        return;
+                        const verifiedFactor = factorsData.totp.find(f => f.status === 'verified');
+                        if (verifiedFactor) {
+                            pendingFactorId = verifiedFactor.id;
+                            document.getElementById('auth-form').classList.add('hidden');
+                            document.getElementById('mfa-challenge-form').classList.remove('hidden');
+                            document.getElementById('auth-modal-title').innerText = 'Подтверждение 2FA';
+                            msg.innerHTML = '⚠️ Требуется код аутентификатора';
+                            msg.style.color = '#fbbf24';
+                            return;
+                        }
                     }
                 }
 
@@ -796,11 +799,14 @@
                 const { data: mfaData, error: mfaError } = await supabaseClient.auth.mfa.listFactors();
                 const mfaBtn = document.getElementById('mfa-setup-btn');
                 if (!mfaError && mfaData && mfaData.totp && mfaData.totp.length > 0) {
-                    mfaBtn.innerText = '✅ 2FA Активна';
-                    mfaBtn.classList.remove('btn-warn');
-                    mfaBtn.classList.add('btn-success');
-                    mfaBtn.onclick = null;
-                    mfaBtn.style.cursor = 'default';
+                    const hasVerified = mfaData.totp.some(f => f.status === 'verified');
+                    if (hasVerified) {
+                        mfaBtn.innerText = '✅ 2FA Активна';
+                        mfaBtn.classList.remove('btn-warn');
+                        mfaBtn.classList.add('btn-success');
+                        mfaBtn.onclick = null;
+                        mfaBtn.style.cursor = 'default';
+                    }
                 }
             }
         }
