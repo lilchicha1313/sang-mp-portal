@@ -462,9 +462,6 @@
 
         // --- КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT ---
         const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyeJ_Q7UbhSpJWkIPU2m-RhsXL3GqvDXN1jywKJgLL6gR1NrfLY3MOb63Wbk57qE1N7/exec';
-        
-        // --- СЕКРЕТНЫЙ ТОКЕН БЕЗОПАСНОСТИ ---
-        const SECRET_TOKEN = "123";
 
         const CONFIG = {
             NOMENCLATURE_MAP: {
@@ -612,11 +609,10 @@
                     reader.readAsDataURL(file);
                 });
 
-                // 1. Отправляем файл в Google Apps Script с защитным токеном
+                // 1. Отправляем файл в Google Apps Script
                 const response = await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
                     body: JSON.stringify({
-                        token: SECRET_TOKEN, // Передаем секретный токен безопасности
                         fileName: file.name,
                         mimeType: file.type,
                         fileBase64: base64data
