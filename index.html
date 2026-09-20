@@ -254,12 +254,18 @@
                 <div class="dossier-label" style="color: #f87171;">Причина отклонения рапорта</div>
                 <div style="font-size: 14px; color: #fff;" id="dossier-rejection-reason"></div>
             </div>
+
+            <!-- ИСТОРИЯ НАРУШИТЕЛЯ -->
+            <div id="dossier-history-section" class="hidden" style="margin-top: 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 6px;">
+                <div class="dossier-label" style="color: #60a5fa; margin-bottom: 10px;">Связанные рапорты на нарушителя</div>
+                <div id="dossier-history-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
             
             <div style="margin-top: 20px; font-size: 11px; color: var(--text-muted); text-align: right;" id="dossier-processed-by"></div>
         </div>
     </div>
 
-    <!-- АВТОРИЗАЦИЯ И 2FA МОДАЛКИ (БЕЗ ИЗМЕНЕНИЙ) -->
+    <!-- АВТОРИЗАЦИЯ И 2FA МОДАЛКИ -->
     <div class="modal-overlay" id="auth-modal">
         <div class="modal-card" style="border-top-color: var(--accent-color);">
             <button class="close-btn" onclick="closeModal('auth-modal')">&times;</button>
@@ -305,7 +311,6 @@
                 </div>
                 <div class="form-group"><label>Ваш Discord ID</label><input type="text" id="author-discord-id"></div>
                 
-                <!-- НОВЫЕ ПОЛЯ НАРУШИТЕЛЯ -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: rgba(239, 68, 68, 0.05); padding: 15px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 18px;">
                     <div class="form-group" style="margin-bottom: 0;"><label style="color: #f87171;">Имя нарушителя (IC)</label><input type="text" id="violator-name" required placeholder="Например: Riko Vercetti"></div>
                     <div class="form-group" style="margin-bottom: 0;"><label style="color: #f87171;">Статик нарушителя</label><input type="text" id="violator-static" required oninput="checkViolatorHistory()"></div>
@@ -428,6 +433,44 @@
                 statusBadge.innerHTML = '<span class="badge badge-pending" style="font-size: 14px; padding: 8px 15px;">🟡 НА РАССМОТРЕНИИ</span>';
             }
 
+            // ИСТОРИЯ НАРУШИТЕЛЯ В ДОСЬЕ
+            const historySection = document.getElementById('dossier-history-section');
+            const historyList = document.getElementById('dossier-history-list');
+            historyList.innerHTML = '';
+
+            if (report.violator_static) {
+                const related = allLoadedReports.filter(r => r.violator_static === report.violator_static && r.id !== id);
+                
+                if (related.length > 0) {
+                    historySection.classList.remove('hidden');
+                    related.forEach(r => {
+                        let badge = r.status === 'approved' ? '<span style="color:#34d399; font-size:10px; font-weight:bold;">[ОДОБРЕНО]</span>' : 
+                                    r.status === 'rejected' ? '<span style="color:#f87171; font-size:10px; font-weight:bold;">[ОТКЛОНЕНО]</span>' : 
+                                    '<span style="color:#fbbf24; font-size:10px; font-weight:bold;">[ОЖИДАЕТ]</span>';
+                        
+                        const item = document.createElement('div');
+                        item.style = 'background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); padding: 10px; border-radius: 4px; cursor: pointer; transition: 0.2s;';
+                        item.onmouseover = () => item.style.borderColor = '#3b82f6';
+                        item.onmouseout = () => item.style.borderColor = 'var(--border-color)';
+                        
+                        item.onclick = () => openDossier(r.id); 
+                        
+                        item.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-weight: 600; font-size: 12px; color: #60a5fa;">${escapeHTML(r.nomenclature)}</span>
+                                ${badge}
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted);">${escapeHTML(r.report_type)}</div>
+                        `;
+                        historyList.appendChild(item);
+                    });
+                } else {
+                    historySection.classList.add('hidden');
+                }
+            } else {
+                historySection.classList.add('hidden');
+            }
+
             openModal('dossier-modal');
         };
 
@@ -463,6 +506,17 @@
                 document.getElementById('nav-auth-btn').onclick = () => switchPanel('dashboard-panel');
                 const navReports = document.getElementById('nav-reports');
                 navReports.classList.remove('hidden'); navReports.onclick = () => { switchPanel('reports-panel'); loadReports(); };
+
+                // ПРОВЕРКА СТАТУСА 2FA
+                const { data: mfaData, error: mfaError } = await supabaseClient.auth.mfa.listFactors();
+                const mfaBtn = document.getElementById('mfa-setup-btn');
+                if (!mfaError && mfaData && mfaData.totp && mfaData.totp.length > 0) {
+                    mfaBtn.innerText = '✅ 2FA Активна';
+                    mfaBtn.classList.remove('btn-warn');
+                    mfaBtn.classList.add('btn-success');
+                    mfaBtn.onclick = null;
+                    mfaBtn.style.cursor = 'default';
+                }
             }
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
@@ -482,7 +536,7 @@
             } else { hintBox.classList.add('hidden'); }
         }
 
-        // Отправка рапорта с новым полем
+        // Отправка рапорта
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
@@ -491,7 +545,7 @@
             const typeName = CONFIG.NOMENCLATURE_MAP[document.getElementById('report-type').value] || document.getElementById('report-type').value;
             const authorStatic = document.getElementById('author-static').value.trim();
             const violatorStaticInput = document.getElementById('violator-static').value.trim();
-            const violatorNameInput = document.getElementById('violator-name').value.trim(); // Новое поле
+            const violatorNameInput = document.getElementById('violator-name').value.trim();
             const baseDesc = document.getElementById('report-desc').value.trim();
 
             try {
@@ -518,7 +572,7 @@
                     author_name: document.getElementById('author-name').value.trim(),
                     author_static: authorStatic,
                     author_discord_id: document.getElementById('author-discord-id').value.trim(),
-                    violator_name: violatorNameInput, // Сохраняем имя в БД
+                    violator_name: violatorNameInput,
                     violator_static: violatorStaticInput,
                     report_type: typeName,
                     details: finalDetails,
@@ -578,7 +632,6 @@
                     actionButtons = `<small style="color:${isApproved ? '#34d399' : '#f87171'};">${escapeHTML(r.processed_by || 'Офицер')}</small>`;
                 }
 
-                // Добавлен класс clickable-row и onclick="openDossier..."
                 return `<tr class="fade-in clickable-row" onclick="openDossier('${escapeHTML(r.id)}')">
                     <td><code style="color:#60a5fa; font-size:12px; font-weight:bold;">${escapeHTML(r.nomenclature || 'Н/Д')}</code><br><small style="color:var(--text-muted);">${dateStr}</small></td>
                     <td><b>${escapeHTML(r.author_name || 'Н/Д')}</b><br><small style="color:var(--text-muted);">ID: ${escapeHTML(r.author_static || 'Н/Д')}</small></td>
