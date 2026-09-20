@@ -96,7 +96,6 @@
         .search-container input { width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 14px; outline: none; }
         .search-container input:focus { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.2); }
 
-        /* Фильтры и статистика */
         .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
         .filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
         .filter-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 12px; border-radius: 4px; font-size: 11px; text-transform: uppercase; font-weight: 600; cursor: pointer; transition: 0.2s; }
@@ -789,7 +788,14 @@
         function renderReportsTable(reports) {
             const tbody = document.getElementById('reports-table-body');
             if (!reports || reports.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Записи не найдены</td></tr>'; return; }
-            const rank = currentUserData?.rank || ''; const isBoss = rank.includes('Начальник') || rank.includes('Зам');
+            
+            // Расширенная проверка прав для генералитета и руководства MP
+            const rank = currentUserData?.rank || ''; 
+            const lowerRank = rank.toLowerCase();
+            const isBoss = lowerRank.includes('начальник') || 
+                           lowerRank.includes('зам') || 
+                           lowerRank.includes('general') || 
+                           lowerRank.includes('commander');
 
             tbody.innerHTML = reports.map(r => {
                 const dateStr = r.created_at ? new Date(r.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Н/Д';
