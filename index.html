@@ -231,6 +231,12 @@
                 </div>
             </div>
 
+            <!-- ДИСЦИПЛИНАРНЫЙ СТАТУС БОЙЦА (ВЫГОВОРЫ И УВОЛЬНЕНИЕ) -->
+            <div id="dossier-disciplinary-block" style="margin-bottom: 20px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 6px;">
+                <div class="dossier-label" style="color: #f87171;">⚖️ Дисциплинарный статус нарушителя в кадровой базе</div>
+                <div id="dossier-disciplinary-content" style="font-size: 14px; font-weight: 600; color: #fff; margin-top: 6px;">Синхронизация с unit_roster...</div>
+            </div>
+
             <div style="margin-bottom: 20px;">
                 <div class="dossier-label">Инкриминируемая статья / Нарушение</div>
                 <div style="font-size: 16px; font-weight: 600; color: #fbbf24; background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 4px; border-left: 3px solid #fbbf24;" id="dossier-reason">
@@ -390,8 +396,8 @@
             document.querySelectorAll('#status-msg, #report-status-msg, #mfa-setup-msg').forEach(msg => msg.innerText = '');
         };
 
-        // ОТКРЫТИЕ ДОСЬЕ
-        window.openDossier = (id) => {
+        // ОТКРЫТИЕ ДОСЬЕ И ЗАГРУЗКА ДИСЦИПЛИНАРНОГО СТАТУСА
+        window.openDossier = async (id) => {
             const report = allLoadedReports.find(r => r.id === id);
             if (!report) return;
 
@@ -404,6 +410,29 @@
             document.getElementById('dossier-violator-name').innerText = report.violator_name || 'Неизвестно';
             document.getElementById('dossier-violator-static').innerText = report.violator_static || 'Н/Д';
             
+            // Загрузка выговоров и статуса увольнения нарушителя из unit_roster
+            const discContent = document.getElementById('dossier-disciplinary-content');
+            discContent.innerHTML = 'Запрос кадровых данных...';
+            
+            if (report.violator_static) {
+                const { data: rosterData } = await supabaseClient
+                    .from('unit_roster')
+                    .select('warnings, is_fired, rank, full_name')
+                    .eq('static', report.violator_static)
+                    .maybeSingle();
+
+                if (rosterData) {
+                    let wCount = rosterData.warnings || 0;
+                    let wColor = wCount >= 3 ? '#ef4444' : wCount === 2 ? '#f59e0b' : '#34d399';
+                    let firedNotice = rosterData.is_fired ? `<br><span style="color: #ef4444; font-weight: bold; font-size: 13px; margin-top: 4px; display: inline-block;">🚨 СТАТУС: УВОЛЕН ИЗ СТРОЯ (Достигнут лимит 3/3 выговоров)</span>` : '';
+                    discContent.innerHTML = `Активные выговоры: <span style="color: ${wColor}; font-size: 16px;"><b>${wCount} / 3</b></span>${firedNotice}`;
+                } else {
+                    discContent.innerHTML = `<span style="color: var(--text-muted);">Боец со статиком <b>${escapeHTML(report.violator_static)}</b> не найден в кадровой таблице ` + `<code>unit_roster</code>` + ` (возможно, гражданский).</span>`;
+                }
+            } else {
+                discContent.innerHTML = '<span style="color: var(--text-muted);">Статик нарушителя не указан</span>';
+            }
+
             document.getElementById('dossier-reason').innerText = report.report_type || 'Н/Д';
             document.getElementById('dossier-details').innerText = report.details || 'Нет описания';
             
