@@ -107,7 +107,7 @@
 
         .table-responsive { width: 100%; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 13px; text-align: left; min-width: 700px; }
-        th, td { padding: 16px 12px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+        th, td { padding: 16px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: 600; letter-spacing: 1px; background: rgba(0,0,0,0.2); }
         tr { transition: background 0.2s; }
         tr.clickable-row:hover { background: rgba(59, 130, 246, 0.1); cursor: pointer; box-shadow: inset 2px 0 0 #3b82f6; }
@@ -148,11 +148,13 @@
         <nav>
             <a id="nav-home" class="active">Главная</a>
             <a id="nav-reports" class="hidden">Реестр рапортов</a>
+            <a id="nav-acts" class="hidden">Локальные акты</a>
             <a id="nav-auth-btn" style="color: var(--accent-color);">Авторизация</a>
         </nav>
     </header>
 
     <main>
+        <!-- ГЛАВНАЯ СТРАНИЦА -->
         <div class="hero-card fade-in" id="hero-welcome">
             <div class="subtitle">Secure Network SANG</div>
             <h1>Подача рапорта о нарушении</h1>
@@ -160,6 +162,7 @@
             <button class="btn btn-blue" style="font-size: 15px; padding: 14px 30px;" onclick="openModal('report-modal')">📄 Инициировать рапорт</button>
         </div>
 
+        <!-- ДАШБОРД -->
         <div class="hero-card hidden" id="dashboard-panel" style="text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
                 <div>
@@ -178,11 +181,13 @@
             
             <h3 style="margin-top: 0; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Доступные модули</h3>
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <button class="btn btn-blue" onclick="switchPanel('reports-panel'); loadReports();">Доступ к базе рапортов</button>
+                <button class="btn btn-blue" onclick="switchPanel('reports-panel'); loadReports();">База рапортов</button>
+                <button class="btn btn-blue" onclick="switchPanel('acts-panel'); loadActs();">Реестр локальных актов</button>
                 <button class="btn btn-blue" id="passkey-enroll-btn" onclick="registerPasskey()">🔑 Зарегистрировать Passkey</button>
             </div>
         </div>
 
+        <!-- РЕЕСТР РАПОРТОВ -->
         <div class="hero-card hidden" id="reports-panel" style="text-align: left; max-width: 1400px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                 <div>
@@ -195,7 +200,6 @@
                 </div>
             </div>
 
-            <!-- СТАТИСТИКА -->
             <div class="stats-strip">
                 <div class="stat-box">
                     <div class="stat-num" id="stat-total">0</div>
@@ -216,7 +220,7 @@
             </div>
 
             <div class="search-container">
-                <input type="text" id="report-search-input" placeholder="🔍 Интерактивный поиск по номенклатуре, именам, статикам или сути нарушения..." oninput="filterReports()">
+                <input type="text" id="report-search-input" placeholder="🔍 Интерактивный поиск по номенклатуре, именам, статикам..." oninput="filterReports()">
             </div>
 
             <div class="filter-bar">
@@ -245,13 +249,93 @@
                 </table>
             </div>
         </div>
+
+        <!-- РЕЕСТР ЛОКАЛЬНЫХ АКТОВ -->
+        <div class="hero-card hidden" id="acts-panel" style="text-align: left; max-width: 1400px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <div class="subtitle">База знаний Military Police</div>
+                    <h1 style="font-size: 24px; margin-bottom: 0;">Реестр нормативных актов и постановлений</h1>
+                </div>
+                <button class="btn btn-blue" onclick="openModal('add-act-modal')">➕ Загрузить новый акт</button>
+            </div>
+
+            <div class="search-container">
+                <input type="text" id="act-search-input" placeholder="🔍 Поиск актов по номеру, названию или категории..." oninput="filterActs()">
+            </div>
+
+            <div class="filter-bar">
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="setActCategoryFilter('all', this)">Все категории</button>
+                    <button class="filter-btn" onclick="setActCategoryFilter('Устав', this)">Уставы</button>
+                    <button class="filter-btn" onclick="setActCategoryFilter('Приказ', this)">Приказы</button>
+                    <button class="filter-btn" onclick="setActCategoryFilter('Постановление', this)">Постановления</button>
+                    <button class="filter-btn" onclick="setActCategoryFilter('Инструкция', this)">Инструкции</button>
+                    <button class="filter-btn" onclick="setActCategoryFilter('Бланк', this)">Бланки</button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Номер</th>
+                            <th style="width: 15%;">Категория</th>
+                            <th style="width: 45%;">Наименование документа</th>
+                            <th style="width: 15%;">Дата публикации</th>
+                            <th style="width: 10%;">Документ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="acts-table-body"></tbody>
+                </table>
+            </div>
+        </div>
     </main>
+
+    <!-- МОДАЛКА: ЗАГРУЗКА АКТА -->
+    <div class="modal-overlay" id="add-act-modal">
+        <div class="modal-card">
+            <button class="close-btn" onclick="closeModal('add-act-modal')">&times;</button>
+            <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;">Публикация документа</h2>
+            <form id="add-act-form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Номер документа</label>
+                        <input type="text" id="act-number" required placeholder="Напр.: Указ №42">
+                    </div>
+                    <div class="form-group">
+                        <label>Категория</label>
+                        <select id="act-category">
+                            <option value="Устав">Устав</option>
+                            <option value="Приказ">Приказ руководства</option>
+                            <option value="Постановление">Постановление</option>
+                            <option value="Инструкция">Инструкция</option>
+                            <option value="Бланк">Бланк / Форма</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Наименование (Суть документа)</label>
+                    <input type="text" id="act-title" required placeholder="О правилах патрулирования...">
+                </div>
+                
+                <div class="form-group" style="background: rgba(59, 130, 246, 0.05); padding: 15px; border-radius: 6px; border: 1px dashed rgba(59, 130, 246, 0.3);">
+                    <label style="color: #60a5fa;">Файл (PDF, JPG, PNG)</label>
+                    <input type="file" id="act-file" required accept=".pdf,.jpg,.jpeg,.png" style="background: rgba(0,0,0,0.3); padding: 8px;">
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Размер файла: до 15 МБ.</small>
+                </div>
+                
+                <button type="submit" class="btn btn-blue" id="act-submit-btn" style="width: 100%; margin-top: 10px;">📤 Отправить в базу и GitHub</button>
+            </form>
+            <div id="act-status-msg" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
+        </div>
+    </div>
 
     <!-- DOSSIER MODAL -->
     <div class="modal-overlay" id="dossier-modal">
         <div class="modal-card" style="border-top-color: #60a5fa; max-width: 800px;">
             <button class="close-btn" onclick="closeModal('dossier-modal')">&times;</button>
-            
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
                 <div>
                     <div class="subtitle" style="color: #60a5fa;">MILITARY POLICE DOSSIER</div>
@@ -268,39 +352,38 @@
                     <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Статик: <span id="dossier-applicant-static" style="color: #fff;">-</span></div>
                 </div>
                 <div class="dossier-section" style="border-left-color: #f87171;">
-                    <div class="dossier-label">Нарушитель (Подозрительный)</div>
+                    <div class="dossier-label">Нарушитель</div>
                     <div class="dossier-value" id="dossier-violator-name" style="color: #f87171;">Имя Фамилия</div>
                     <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Статик: <span id="dossier-violator-static" style="color: #fff;">-</span></div>
                 </div>
             </div>
 
             <div style="margin-bottom: 20px;">
-                <div class="dossier-label">Инкриминируемая статья / Нарушение</div>
+                <div class="dossier-label">Инкриминируемая статья</div>
                 <div style="font-size: 16px; font-weight: 600; color: #fbbf24; background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 4px; border-left: 3px solid #fbbf24;" id="dossier-reason">
                     Статья нарушения
                 </div>
             </div>
 
             <div>
-                <div class="dossier-label">Фабула (Детали ситуации)</div>
+                <div class="dossier-label">Фабула</div>
                 <div class="pre-wrap" style="font-size: 14px; line-height: 1.6; color: #e2e8f0; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 6px; border: 1px solid var(--border-color);" id="dossier-details">
                     Описание ситуации
                 </div>
             </div>
 
             <div class="dossier-evidence">
-                <div class="dossier-label" style="color: #10b981;">Прикрепленные материалы (Доказательства)</div>
+                <div class="dossier-label" style="color: #10b981;">Прикрепленные материалы</div>
                 <div id="dossier-evidence-link" style="margin-top: 5px; word-break: break-all;"></div>
             </div>
 
             <div id="dossier-rejection-block" class="hidden" style="margin-top: 15px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 6px;">
-                <div class="dossier-label" style="color: #f87171;">Причина отклонения рапорта</div>
+                <div class="dossier-label" style="color: #f87171;">Причина отклонения</div>
                 <div style="font-size: 14px; color: #fff;" id="dossier-rejection-reason"></div>
             </div>
 
-            <!-- ИСТОРИЯ НАРУШИТЕЛЯ -->
             <div id="dossier-history-section" class="hidden" style="margin-top: 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 6px;">
-                <div class="dossier-label" style="color: #60a5fa; margin-bottom: 10px;">Связанные рапорты на нарушителя</div>
+                <div class="dossier-label" style="color: #60a5fa; margin-bottom: 10px;">Связанные рапорты</div>
                 <div id="dossier-history-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
             </div>
             
@@ -336,30 +419,30 @@
                 <div class="form-group"><label>Ваш Discord ID</label><input type="text" id="author-discord-id"></div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: rgba(239, 68, 68, 0.05); padding: 15px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 18px;">
-                    <div class="form-group" style="margin-bottom: 0;"><label style="color: #f87171;">Имя нарушителя (IC)</label><input type="text" id="violator-name" required placeholder="Например: Riko Vercetti"></div>
+                    <div class="form-group" style="margin-bottom: 0;"><label style="color: #f87171;">Имя нарушителя (IC)</label><input type="text" id="violator-name" required placeholder="Riko Vercetti"></div>
                     <div class="form-group" style="margin-bottom: 0;"><label style="color: #f87171;">Статик нарушителя</label><input type="text" id="violator-static" required oninput="checkViolatorHistory()"></div>
                 </div>
                 
                 <div id="violator-history-hint" class="hidden" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px 12px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #f87171;">
-                    ⚠️ <span id="violator-history-text">У этого нарушителя уже есть прошлые рапорты!</span>
+                    ⚠️ <span id="violator-history-text">У этого нарушителя есть прошлые рапорты!</span>
                 </div>
 
                 <div class="form-group">
                     <label>Статья / Пункт устава</label>
                     <select id="report-type">
                         <optgroup label="— РАЗДЕЛ II: Субординация и этика —">
-                            <option value="2.1_zakon">2.1. Незнание/несоблюдение Уголовного, Административного или Этического кодекса</option>
-                            <option value="2.2_sub">2.2. Нарушение правил субординации при устном общении</option>
-                            <option value="2.3_morals">2.3. Проявление неуважения, грубости к сослуживцам или гражданским</option>
+                            <option value="2.1_zakon">2.1. Незнание/несоблюдение законодательства</option>
+                            <option value="2.2_sub">2.2. Нарушение правил субординации</option>
+                            <option value="2.3_morals">2.3. Неуважение, грубость</option>
                         </optgroup>
-                        <optgroup label="— РАЗДЕЛ IV: Служебная дисциплина и посты —">
-                            <option value="4.12_post_leave">4.12. Самовольный уход с поста или места службы без доклада</option>
-                            <option value="4.20_leave_base">4.20. Самовольное покидание территории Форта-Занкудо</option>
-                            <option value="4.35_negligence">4.35. Халатность (отклонение от устава, неисполнение обязанностей)</option>
-                            <option value="4.36_sleep_post">4.36. Сон на посту / в строю дольше положенного времени</option>
+                        <optgroup label="— РАЗДЕЛ IV: Служебная дисциплина —">
+                            <option value="4.12_post_leave">4.12. Самовольный уход с поста</option>
+                            <option value="4.20_leave_base">4.20. Самовольное покидание ФЗ</option>
+                            <option value="4.35_negligence">4.35. Халатность</option>
+                            <option value="4.36_sleep_post">4.36. Сон на посту / в строю</option>
                         </optgroup>
                         <optgroup label="— РАЗДЕЛ VI: Иные правонарушения —">
-                            <option value="6.1_other_breach">6.1. Иное нарушение внутренних регламентов, не вошедшее в основные статьи</option>
+                            <option value="6.1_other_breach">6.1. Иное нарушение регламентов</option>
                         </optgroup>
                     </select>
                 </div>
@@ -372,9 +455,16 @@
     </div>
 
     <script>
+        // --- КОНФИГУРАЦИЯ SUPABASE ---
         const SUPABASE_URL = 'https://xyqhrfbhkdxwtawtapjr.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
-        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- КОНФИГУРАЦИЯ GITHUB ЗАГРУЗКИ ---
+        const GITHUB_TOKEN = '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';
+        const GITHUB_OWNER = 'lilchicha1313';
+        const GITHUB_REPO = 'sang-acts-archive';
+
         const CONFIG = {
             NOMENCLATURE_MAP: {
                 "2.1_zakon": "2.1. Незнание/несоблюдение законодательства штата",
@@ -388,10 +478,11 @@
             }
         };
 
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUserData = null;
         let allLoadedReports = []; 
+        let allLoadedActs = [];
         let currentStatusFilter = 'all';
+        let currentActCategoryFilter = 'all';
 
         function escapeHTML(str) {
             if (!str) return '';
@@ -399,7 +490,7 @@
         }
 
         function switchPanel(panelId) {
-            ['hero-welcome', 'dashboard-panel', 'reports-panel'].forEach(id => {
+            ['hero-welcome', 'dashboard-panel', 'reports-panel', 'acts-panel'].forEach(id => {
                 const el = document.getElementById(id);
                 el.classList.add('hidden'); el.classList.remove('fade-in');
             });
@@ -410,7 +501,141 @@
         window.openModal = (id) => document.getElementById(id).classList.add('active');
         window.closeModal = (id) => {
             document.getElementById(id).classList.remove('active');
-            document.querySelectorAll('#status-msg, #report-status-msg').forEach(msg => msg.innerText = '');
+            document.querySelectorAll('#status-msg, #report-status-msg, #act-status-msg').forEach(msg => msg.innerText = '');
+        };
+
+        // --- ЛОКАЛЬНЫЕ АКТЫ (ЗАГРУЗКА И ВЫВОД) ---
+        window.loadActs = async function() {
+            const tbody = document.getElementById('acts-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 40px; color: var(--text-muted);">Загрузка нормативных актов...</td></tr>';
+            
+            const { data: acts, error } = await supabaseClient.from('local_acts').select('*').order('created_at', { ascending: false });
+            if (error || !acts) { 
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 40px; color: #f87171;">Ошибка загрузки реестра актов</td></tr>'; 
+                return; 
+            }
+            
+            allLoadedActs = acts;
+            filterActs();
+        };
+
+        window.setActCategoryFilter = function(category, btnElement) {
+            currentActCategoryFilter = category;
+            document.querySelectorAll('#acts-panel .filter-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            filterActs();
+        };
+
+        window.filterActs = function() {
+            const query = document.getElementById('act-search-input').value.toLowerCase().trim();
+            let filtered = allLoadedActs.filter(act => {
+                const matchesCat = currentActCategoryFilter === 'all' || act.category === currentActCategoryFilter;
+                const matchesQuery = !query || 
+                    (act.act_number && act.act_number.toLowerCase().includes(query)) ||
+                    (act.title && act.title.toLowerCase().includes(query)) ||
+                    (act.category && act.category.toLowerCase().includes(query));
+                return matchesCat && matchesQuery;
+            });
+            renderActsTable(filtered);
+        };
+
+        function renderActsTable(acts) {
+            const tbody = document.getElementById('acts-table-body');
+            if (!acts || acts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 40px; color: var(--text-muted);">Документы не найдены</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = acts.map(act => {
+                const dateStr = act.created_at ? new Date(act.created_at).toLocaleDateString('ru-RU') : 'Н/Д';
+                return `<tr class="fade-in">
+                    <td><b style="color: #60a5fa;">${escapeHTML(act.act_number)}</b></td>
+                    <td><span class="badge badge-pending" style="background: rgba(59, 130, 246, 0.1); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3);">${escapeHTML(act.category)}</span></td>
+                    <td><strong style="color: #fff;">${escapeHTML(act.title)}</strong></td>
+                    <td><small style="color: var(--text-muted);">${dateStr}</small></td>
+                    <td>
+                        <a href="${escapeHTML(act.file_url)}" target="_blank" class="btn btn-blue" style="padding: 6px 12px; font-size: 11px; text-decoration: none;">📄 Открыть</a>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ОБРАБОТЧИК ЗАГРУЗКИ ФАЙЛА В GITHUB И СОХРАНЕНИЯ В SUPABASE
+        document.getElementById('add-act-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('act-submit-btn'); 
+            const msg = document.getElementById('act-status-msg');
+            btn.disabled = true; 
+            msg.innerText = '';
+
+            try {
+                const fileInput = document.getElementById('act-file');
+                const file = fileInput.files[0];
+                if (!file) throw new Error("Пожалуйста, выберите файл.");
+
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                
+                reader.onload = async () => {
+                    try {
+                        const base64data = reader.result.split(',')[1];
+                        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                        const uniqueFileName = `act_${Date.now()}_${cleanFileName}`;
+                        
+                        btn.innerText = 'Загрузка в GitHub...';
+                        const ghResponse = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${uniqueFileName}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `token ${GITHUB_TOKEN}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                message: `Загрузка акта: ${document.getElementById('act-number').value}`,
+                                content: base64data
+                            })
+                        });
+
+                        const ghData = await ghResponse.json();
+                        if (!ghResponse.ok) throw new Error(ghData.message || "Ошибка API GitHub");
+
+                        const rawDownloadUrl = ghData.content.download_url;
+
+                        btn.innerText = 'Сохранение в базе данных...';
+                        const { error: dbError } = await supabaseClient.from('local_acts').insert([{
+                            act_number: document.getElementById('act-number').value.trim(),
+                            category: document.getElementById('act-category').value,
+                            title: document.getElementById('act-title').value.trim(),
+                            file_url: rawDownloadUrl
+                        }]);
+
+                        if (dbError) throw dbError;
+
+                        msg.innerHTML = '✅ Акт успешно опубликован!'; 
+                        msg.style.color = '#34d399';
+                        
+                        setTimeout(() => { 
+                            closeModal('add-act-modal'); 
+                            document.getElementById('add-act-form').reset(); 
+                            loadActs(); 
+                        }, 1500);
+
+                    } catch (err) {
+                        msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message); 
+                        msg.style.color = '#f87171';
+                    } finally { 
+                        btn.disabled = false; 
+                        btn.innerText = '📤 Отправить в базу и GitHub'; 
+                    }
+                };
+
+                reader.onerror = () => { throw new Error("Ошибка чтения файла браузером"); };
+
+            } catch (err) {
+                msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message); 
+                msg.style.color = '#f87171';
+                btn.disabled = false; 
+                btn.innerText = '📤 Отправить в базу и GitHub';
+            }
         };
 
         // --- PASSKEY (WEBAUTHN) ИНТЕГРАЦИЯ ---
@@ -430,56 +655,38 @@
 
         window.registerPasskey = async function() {
             try {
-                if (!window.PublicKeyCredential) {
-                    alert('Passkeys (WebAuthn) не поддерживаются вашим браузером.');
-                    return;
-                }
-                const challenge = new Uint8Array(32);
-                window.crypto.getRandomValues(challenge);
-                
+                if (!window.PublicKeyCredential) { alert('Passkeys не поддерживаются вашим браузером.'); return; }
+                const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
                 const userId = currentUserData ? new TextEncoder().encode(currentUserData.id) : new TextEncoder().encode('sang_officer');
                 const userName = currentUserData ? currentUserData.full_name : 'Officer';
-                
                 const hostname = window.location.hostname;
                 const rp = (hostname && hostname !== '') ? { name: "SANG MP Terminal", id: hostname } : { name: "SANG MP Terminal" };
 
-                const publicKeyCredentialCreationOptions = {
-                    challenge: challenge,
-                    rp: rp,
-                    user: { id: userId, name: userName, displayName: userName },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-                    timeout: 60000,
-                    attestation: "direct",
-                    authenticatorSelection: {
-                        residentKey: "required",
-                        userVerification: "preferred"
+                const credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: challenge, rp: rp,
+                        user: { id: userId, name: userName, displayName: userName },
+                        pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                        timeout: 60000, attestation: "direct",
+                        authenticatorSelection: { residentKey: "required", userVerification: "preferred" }
                     }
-                };
+                });
 
-                const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
                 const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
                 const staticKey = currentUserData?.static || 'default';
                 localStorage.setItem('sang_passkey_' + staticKey, credentialId);
                 
                 updatePasskeyButtonState(true);
-                alert('✅ Passkey успешно зарегистрирован на этом устройстве!');
-            } catch (err) {
-                console.error(err);
-                alert('❌ Ошибка регистрации Passkey: ' + err.message);
-            }
+                alert('✅ Passkey успешно зарегистрирован!');
+            } catch (err) { alert('❌ Ошибка: ' + err.message); }
         };
 
         window.signInWithPasskey = async function() {
             const msg = document.getElementById('status-msg');
-            msg.innerText = 'Ожидание Passkey (TouchID / FaceID / Windows Hello)...';
-            msg.style.color = '#fbbf24';
+            msg.innerText = 'Ожидание Passkey...'; msg.style.color = '#fbbf24';
             try {
-                if (!window.PublicKeyCredential) {
-                    throw new Error('Passkeys не поддерживаются браузером.');
-                }
-
-                const challenge = new Uint8Array(32);
-                window.crypto.getRandomValues(challenge);
+                if (!window.PublicKeyCredential) throw new Error('Passkeys не поддерживаются браузером.');
+                const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
 
                 let allowCredentials = [];
                 for (let i = 0; i < localStorage.length; i++) {
@@ -487,87 +694,51 @@
                     if (key && key.startsWith('sang_passkey_')) {
                         const credIdB64 = localStorage.getItem(key);
                         if (credIdB64) {
-                            try {
-                                const binaryString = atob(credIdB64);
-                                const bytes = new Uint8Array(binaryString.length);
-                                for (let j = 0; j < binaryString.length; j++) {
-                                    bytes[j] = binaryString.charCodeAt(j);
-                                }
-                                allowCredentials.push({
-                                    id: bytes.buffer,
-                                    type: "public-key",
-                                    transports: ["internal", "usb", "ble", "nfc"]
-                                });
-                            } catch (e) {}
+                            const binaryString = atob(credIdB64);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let j = 0; j < binaryString.length; j++) bytes[j] = binaryString.charCodeAt(j);
+                            allowCredentials.push({ id: bytes.buffer, type: "public-key", transports: ["internal", "usb", "ble", "nfc"] });
                         }
                     }
                 }
 
                 const hostname = window.location.hostname;
-                const rpId = (hostname && hostname !== '') ? hostname : undefined;
-
-                const publicKeyCredentialRequestOptions = {
-                    challenge: challenge,
-                    timeout: 60000,
-                    userVerification: "preferred",
-                    ...(rpId ? { rpId } : {}),
-                    ...(allowCredentials.length > 0 ? { allowCredentials } : {})
-                };
-
-                const assertion = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
+                const assertion = await navigator.credentials.get({
+                    publicKey: { challenge: challenge, timeout: 60000, userVerification: "preferred", ...(hostname ? { rpId: hostname } : {}), ...(allowCredentials.length > 0 ? { allowCredentials } : {}) }
+                });
 
                 if (assertion) {
-                    msg.innerHTML = '✅ Passkey подтвержден! Авторизация в БД...';
-                    msg.style.color = '#34d399';
-                    
+                    msg.innerHTML = '✅ Passkey подтвержден!'; msg.style.color = '#34d399';
                     const { data: profiles, error } = await supabaseClient.from('unit_roster').select('*').limit(1);
-                    if (error || !profiles || profiles.length === 0) {
-                        throw new Error('Не удалось найти профиль офицера в базе.');
-                    }
-                    
-                    setTimeout(() => {
-                        closeModal('auth-modal');
-                        loadProfile(profiles[0]);
-                    }, 800);
+                    if (error || !profiles || profiles.length === 0) throw new Error('Профиль не найден в базе.');
+                    setTimeout(() => { closeModal('auth-modal'); loadProfile(profiles[0]); }, 800);
                 }
             } catch (err) {
-                console.error(err);
-                msg.innerHTML = '❌ Ошибка входа по Passkey: ' + escapeHTML(err.message);
-                msg.style.color = '#f87171';
+                msg.innerHTML = '❌ Ошибка Входа: ' + escapeHTML(err.message); msg.style.color = '#f87171';
             }
         };
-        // -------------------------------------
 
-        // ОТКРЫТИЕ ДОСЬЕ
+        // --- ДОСЬЕ ---
         window.openDossier = (id) => {
             const report = allLoadedReports.find(r => r.id === id);
             if (!report) return;
 
             document.getElementById('dossier-nomenclature').innerText = report.nomenclature || 'SANG-MP/REPORT';
             document.getElementById('dossier-date').innerText = `Дата формирования: ${report.created_at ? new Date(report.created_at).toLocaleString('ru-RU') : 'Н/Д'}`;
-            
             document.getElementById('dossier-applicant-name').innerText = report.author_name || 'Н/Д';
             document.getElementById('dossier-applicant-static').innerText = report.author_static || 'Н/Д';
-            
             document.getElementById('dossier-violator-name').innerText = report.violator_name || 'Неизвестно';
             document.getElementById('dossier-violator-static').innerText = report.violator_static || 'Н/Д';
-            
             document.getElementById('dossier-reason').innerText = report.report_type || 'Н/Д';
             document.getElementById('dossier-details').innerText = report.details || 'Нет описания';
             
             const evLink = document.getElementById('dossier-evidence-link');
-            if (report.evidence) {
-                evLink.innerHTML = `<a href="${escapeHTML(report.evidence)}" target="_blank" style="color: #10b981; font-weight: bold;">[Открыть прикрепленные материалы]</a>`;
-            } else {
-                evLink.innerHTML = '<span style="color: #94a3b8;">Материалы отсутствуют</span>';
-            }
+            evLink.innerHTML = report.evidence ? `<a href="${escapeHTML(report.evidence)}" target="_blank" style="color: #10b981; font-weight: bold;">[Открыть прикрепленные материалы]</a>` : '<span style="color: #94a3b8;">Материалы отсутствуют</span>';
 
             const statusBadge = document.getElementById('dossier-status-badge');
             const rejectBlock = document.getElementById('dossier-rejection-block');
             const processedBy = document.getElementById('dossier-processed-by');
-            
-            rejectBlock.classList.add('hidden');
-            processedBy.innerText = '';
+            rejectBlock.classList.add('hidden'); processedBy.innerText = '';
 
             if (report.status === 'approved') {
                 statusBadge.innerHTML = '<span class="badge badge-approved" style="font-size: 14px; padding: 8px 15px;">✅ ОДОБРЕНО</span>';
@@ -581,50 +752,13 @@
                 statusBadge.innerHTML = '<span class="badge badge-pending" style="font-size: 14px; padding: 8px 15px;">🟡 НА РАССМОТРЕНИИ</span>';
             }
 
-            // ИСТОРИЯ НАРУШИТЕЛЯ В ДОСЬЕ
-            const historySection = document.getElementById('dossier-history-section');
-            const historyList = document.getElementById('dossier-history-list');
-            historyList.innerHTML = '';
-
-            if (report.violator_static) {
-                const related = allLoadedReports.filter(r => r.violator_static === report.violator_static && r.id !== id);
-                
-                if (related.length > 0) {
-                    historySection.classList.remove('hidden');
-                    related.forEach(r => {
-                        let badge = r.status === 'approved' ? '<span style="color:#34d399; font-size:10px; font-weight:bold;">[ОДОБРЕНО]</span>' : 
-                                    r.status === 'rejected' ? '<span style="color:#f87171; font-size:10px; font-weight:bold;">[ОТКЛОНЕНО]</span>' : 
-                                    '<span style="color:#fbbf24; font-size:10px; font-weight:bold;">[ОЖИДАЕТ]</span>';
-                        
-                        const item = document.createElement('div');
-                        item.style = 'background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); padding: 10px; border-radius: 4px; cursor: pointer; transition: 0.2s;';
-                        item.onmouseover = () => item.style.borderColor = '#3b82f6';
-                        item.onmouseout = () => item.style.borderColor = 'var(--border-color)';
-                        item.onclick = () => openDossier(r.id); 
-                        
-                        item.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span style="font-weight: 600; font-size: 12px; color: #60a5fa;">${escapeHTML(r.nomenclature)}</span>
-                                ${badge}
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-muted);">${escapeHTML(r.report_type)}</div>
-                        `;
-                        historyList.appendChild(item);
-                    });
-                } else {
-                    historySection.classList.add('hidden');
-                }
-            } else {
-                historySection.classList.add('hidden');
-            }
-
             openModal('dossier-modal');
         };
 
+        // --- НАВИГАЦИЯ И АВТОРИЗАЦИЯ ---
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
 
-        // Авторизация по паролю
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('login-submit-btn'); const msg = document.getElementById('status-msg');
@@ -635,7 +769,6 @@
                     password: document.getElementById('login-password').value 
                 });
                 if (error) throw error;
-
                 msg.innerHTML = '✅ Доступ разрешен'; msg.style.color = '#34d399'; 
                 setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 800); 
             } catch (err) {
@@ -653,17 +786,23 @@
                 document.getElementById('profile-static').innerText = data.static || '-';
                 document.getElementById('profile-rank').innerText = data.rank || '-';
                 document.getElementById('profile-callsign').innerText = data.callsign || 'Н/Д';
+                
                 document.getElementById('nav-auth-btn').innerText = 'Личный кабинет'; 
                 document.getElementById('nav-auth-btn').onclick = () => switchPanel('dashboard-panel');
+                
                 const navReports = document.getElementById('nav-reports');
-                navReports.classList.remove('hidden'); navReports.onclick = () => { switchPanel('reports-panel'); loadReports(); };
+                navReports.classList.remove('hidden'); 
+                navReports.onclick = () => { switchPanel('reports-panel'); loadReports(); };
 
-                // Проверяем наличие Passkey и обновляем статус кнопки
+                const navActs = document.getElementById('nav-acts');
+                navActs.classList.remove('hidden'); 
+                navActs.onclick = () => { switchPanel('acts-panel'); loadActs(); };
+
                 const staticKey = data.static || 'default';
-                const hasPasskey = !!localStorage.getItem('sang_passkey_' + staticKey);
-                updatePasskeyButtonState(hasPasskey);
+                updatePasskeyButtonState(!!localStorage.getItem('sang_passkey_' + staticKey));
             }
         }
+
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
 
         window.checkViolatorHistory = async function() {
@@ -672,7 +811,7 @@
             const hintText = document.getElementById('violator-history-text');
             if (!violatorStatic || violatorStatic.length < 2) { hintBox.classList.add('hidden'); return; }
 
-            const { data, error } = await supabaseClient.from('reports').select('id, nomenclature, report_type, details, created_at').eq('violator_static', violatorStatic).eq('status', 'approved');
+            const { data, error } = await supabaseClient.from('reports').select('id, nomenclature, report_type').eq('violator_static', violatorStatic).eq('status', 'approved');
             if (!error && data && data.length > 0) {
                 hintBox.classList.remove('hidden');
                 let summaryHTML = `Внимание! У статика <b>${escapeHTML(violatorStatic)}</b> рецидив — одобренных нарушений: <b>${data.length}</b><br>`;
@@ -681,7 +820,7 @@
             } else { hintBox.classList.add('hidden'); }
         };
 
-        // Отправка рапорта
+        // --- РАПОРТЫ ---
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
@@ -728,11 +867,7 @@
                 if (insertErr) throw insertErr;
 
                 msg.innerHTML = `✅ Рапорт зарегистрирован: <b>${escapeHTML(assignedNomenclature)}</b>`; msg.style.color = '#34d399'; 
-                setTimeout(() => { 
-                    closeModal('report-modal'); 
-                    document.getElementById('report-form').reset(); 
-                    document.getElementById('violator-history-hint').classList.add('hidden'); 
-                }, 1500);
+                setTimeout(() => { closeModal('report-modal'); document.getElementById('report-form').reset(); }, 1500);
             } catch (err) {
                 msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message); msg.style.color = '#f87171';
             } finally { btn.disabled = false; btn.innerText = 'Зафиксировать рапорт'; }
@@ -757,7 +892,7 @@
 
         window.setStatusFilter = function(status, btnElement) {
             currentStatusFilter = status;
-            document.querySelectorAll('.filter_btn, .filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#reports-panel .filter-btn').forEach(b => b.classList.remove('active'));
             btnElement.classList.add('active');
             filterReports();
         };
@@ -770,8 +905,7 @@
                     (r.nomenclature && r.nomenclature.toLowerCase().includes(query)) ||
                     (r.violator_static && r.violator_static.toLowerCase().includes(query)) ||
                     (r.violator_name && r.violator_name.toLowerCase().includes(query)) ||
-                    (r.author_name && r.author_name.toLowerCase().includes(query)) ||
-                    (r.report_type && r.report_type.toLowerCase().includes(query));
+                    (r.author_name && r.author_name.toLowerCase().includes(query));
                 return matchesStatus && matchesQuery;
             });
             renderReportsTable(filtered);
@@ -780,54 +914,27 @@
         function renderReportsTable(reports) {
             const tbody = document.getElementById('reports-table-body');
             if (!reports || reports.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Записи не найдены</td></tr>'; return; }
-            
-            const rank = currentUserData?.rank || ''; 
-            const lowerRank = rank.toLowerCase();
-            const isBoss = lowerRank.includes('начальник') || 
-                           lowerRank.includes('зам') || 
-                           lowerRank.includes('general') || 
-                           lowerRank.includes('commander');
 
             tbody.innerHTML = reports.map(r => {
                 const dateStr = r.created_at ? new Date(r.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Н/Д';
                 const isApproved = r.status === 'approved'; const isRejected = r.status === 'rejected';
                 let statusBadge = isApproved ? `<span class="badge badge-approved">✅ Одобрен</span>` : isRejected ? `<span class="badge badge-rejected">❌ Отклонен</span>` : `<span class="badge badge-pending">🟡 Ожидает</span>`;
 
-                let actionButtons = '';
-                if (!isApproved && !isRejected) {
-                    actionButtons = `<div style="display: flex; gap: 5px;">
-                        <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px;" onclick="event.stopPropagation(); approveReport('${escapeHTML(r.id)}')">✓</button>
-                        <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="event.stopPropagation(); rejectReport('${escapeHTML(r.id)}')">✕</button>
-                    </div>`;
-                } else if (isRejected && isBoss) {
-                    actionButtons = `<button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="event.stopPropagation(); reviewReport('${escapeHTML(r.id)}')">🔄 Пересмотр</button>`;
-                } else {
-                    actionButtons = `<small style="color:${isApproved ? '#34d399' : '#f87171'};">${escapeHTML(r.processed_by || 'Офицер')}</small>`;
-                }
+                let actionButtons = (!isApproved && !isRejected) ? `<div style="display: flex; gap: 5px;">
+                    <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px;" onclick="event.stopPropagation(); approveReport('${escapeHTML(r.id)}')">✓</button>
+                    <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="event.stopPropagation(); rejectReport('${escapeHTML(r.id)}')">✕</button>
+                </div>` : `<small style="color:${isApproved ? '#34d399' : '#f87171'};">${escapeHTML(r.processed_by || 'Офицер')}</small>`;
 
                 return `<tr class="fade-in clickable-row" onclick="openDossier('${escapeHTML(r.id)}')">
                     <td><code style="color:#60a5fa; font-size:12px; font-weight:bold;">${escapeHTML(r.nomenclature || 'Н/Д')}</code><br><small style="color:var(--text-muted);">${dateStr}</small></td>
                     <td><b>${escapeHTML(r.author_name || 'Н/Д')}</b><br><small style="color:var(--text-muted);">ID: ${escapeHTML(r.author_static || 'Н/Д')}</small></td>
                     <td><strong style="color:#f87171; font-size: 14px;">${escapeHTML(r.violator_name || 'Неизвестно')}</strong><br><small style="color:var(--text-muted);">ID: ${escapeHTML(r.violator_static || 'Н/Д')}</small></td>
-                    <td>
-                        <strong style="color:#e2e8f0;">${escapeHTML(r.report_type || 'Н/Д')}</strong>
-                        <div class="pre-wrap" style="color:var(--text-muted); font-size: 11px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHTML(r.details || '')}</div>
-                    </td>
+                    <td><strong style="color:#e2e8f0;">${escapeHTML(r.report_type || 'Н/Д')}</strong></td>
                     <td>${statusBadge}</td>
                     <td onclick="event.stopPropagation();">${actionButtons}</td>
                 </tr>`;
             }).join('');
         }
-
-        window.exportReportsJSON = function() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allLoadedReports, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `SANG_MP_Reports_Backup_${new Date().toISOString().slice(0,10)}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        };
 
         const getOfficerInfo = () => currentUserData ? `${currentUserData.full_name} (${currentUserData.static})` : 'Офицер MP';
         async function sendStatusUpdate(id, status, processedBy, rejectReason = '') {
@@ -836,21 +943,7 @@
         }
 
         window.approveReport = async (id) => { if (!confirm('ОДОБРИТЬ рапорт?')) return; if (await sendStatusUpdate(id, 'approved', getOfficerInfo(), '')) loadReports(); };
-        window.rejectReport = async (id) => { const reason = prompt('Причина ОТКЛОНЕНИЯ:'); if (!reason) return; if (await sendStatusUpdate(id, 'rejected', getOfficerInfo(), reason.trim())) loadReports(); };
-        window.reviewReport = async (id) => { if (!confirm('Внимание: Пересмотр ОДОБРИТ рапорт. Продолжить?')) return; if (await sendStatusUpdate(id, 'approved', getOfficerInfo() + ' (Пересмотр)', '')) loadReports(); };
-
-        supabaseClient
-            .channel('public:reports')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, payload => {
-                loadReports();
-            })
-            .subscribe((status) => {
-                const indicator = document.getElementById('realtime-status-indicator');
-                if (indicator && status === 'SUBSCRIBED') {
-                    indicator.innerText = '🟢 Realtime синхронизация активна';
-                    indicator.style.color = '#34d399';
-                }
-            });
+        window.rejectReport = async (id) => { const reason = prompt('Причина ОТКЛОНЕГИЯ:'); if (!reason) return; if (await sendStatusUpdate(id, 'rejected', getOfficerInfo(), reason.trim())) loadReports(); };
 
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
     </script>
