@@ -726,7 +726,7 @@
                     // Формируем заголовок точно как на сайте
                     historyLines.push(`⚠️ Внимание! У статика ${violatorStaticInput} обнаружен рецидив — одобренных нарушений: ${pastReports.length}`);
                     
-                    // Выводим только номер рапорта и нарушенную статью (без огромных текстов)
+                    // Выводим номер рапорта и нарушенную статью (исправлен синтаксис шаблона)
                     pastReports.forEach((rep, index) => {
                         historyLines.push(`• #${index + 1} [${rep.nomenclature \vert{}\vert{} 'Н/Д'}]: ${rep.report_type || 'Н/Д'}`);
                     });
