@@ -326,7 +326,7 @@
                     <small style="color: var(--text-muted); display: block; margin-top: 5px;">Размер файла: до 15 МБ.</small>
                 </div>
                 
-                <button type="submit" class="btn btn-blue" id="act-submit-btn" style="width: 100%; margin-top: 10px;">📤 Отправить в базу и GitHub</button>
+                <button type="submit" class="btn btn-blue" id="act-submit-btn" style="width: 100%; margin-top: 10px;">📤 Отправить в базу</button>
             </form>
             <div id="act-status-msg" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
         </div>
@@ -460,10 +460,8 @@
         const SUPABASE_KEY = 'sb_publishable_ZIKk8Ntxv36i9sTDvilD2A_if96B9Dn';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- КОНФИГУРАЦИЯ GITHUB ЗАГРУЗКИ ---
-        const GITHUB_TOKEN = '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';
-        const GITHUB_OWNER = 'lilchicha1313';
-        const GITHUB_REPO = 'sang-acts-archive';
+        // --- КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT ---
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyeJ_Q7UbhSpJWkIPU2m-RhsXL3GqvDXN1jywKJgLL6gR1NrfLY3MOb63Wbk57qE1N7/exec';
 
         const CONFIG = {
             NOMENCLATURE_MAP: {
@@ -588,7 +586,7 @@
             }).join('');
         }
 
-        // ОБРАБОТЧИК ЗАГРУЗКИ ФАЙЛА В GITHUB И СОХРАНЕНИЯ В SUPABASE
+        // ОБРАБОТЧИК ЗАГРУЗКИ ФАЙЛА В GOOGLE DRIVE ЧЕРЕЗ GOOGLE APPS SCRIPT И СОХРАНЕНИЯ В SUPABASE
         document.getElementById('add-act-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('act-submit-btn'); 
@@ -601,68 +599,57 @@
                 const file = fileInput.files[0];
                 if (!file) throw new Error("Пожалуйста, выберите файл.");
 
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
+                btn.innerText = 'Загрузка файла на Google Диск...';
+
+                // Преобразуем файл в Base64
+                const base64data = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(file);
+                });
+
+                // 1. Отправляем файл в Google Apps Script
+                const response = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        fileName: file.name,
+                        mimeType: file.type,
+                        fileBase64: base64data
+                    })
+                });
+
+                const result = await response.json();
+                if (result.status !== 'success') throw new Error(result.message || "Ошибка загрузки на Google Диск");
+
+                const googleDriveUrl = result.fileUrl;
+
+                // 2. Сохраняем запись с полученной ссылкой в Supabase
+                btn.innerText = 'Сохранение в базу данных...';
+                const { error: dbError } = await supabaseClient.from('local_acts').insert([{
+                    act_number: document.getElementById('act-number').value.trim(),
+                    category: document.getElementById('act-category').value,
+                    title: document.getElementById('act-title').value.trim(),
+                    file_url: googleDriveUrl
+                }]);
+
+                if (dbError) throw dbError;
+
+                msg.innerHTML = '✅ Акт успешно опубликован на Google Диске и сохранен в БД!'; 
+                msg.style.color = '#34d399';
                 
-                reader.onload = async () => {
-                    try {
-                        const base64data = reader.result.split(',')[1];
-                        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                        const uniqueFileName = `act_${Date.now()}_${cleanFileName}`;
-                        
-                        btn.innerText = 'Загрузка в GitHub...';
-                        const ghResponse = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${uniqueFileName}`, {
-                            method: 'PUT',
-                            headers: {
-                                'Authorization': `token ${GITHUB_TOKEN}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                message: `Загрузка акта: ${document.getElementById('act-number').value}`,
-                                content: base64data
-                            })
-                        });
-
-                        const ghData = await ghResponse.json();
-                        if (!ghResponse.ok) throw new Error(ghData.message || "Ошибка API GitHub");
-
-                        const rawDownloadUrl = ghData.content.download_url;
-
-                        btn.innerText = 'Сохранение в базе данных...';
-                        const { error: dbError } = await supabaseClient.from('local_acts').insert([{
-                            act_number: document.getElementById('act-number').value.trim(),
-                            category: document.getElementById('act-category').value,
-                            title: document.getElementById('act-title').value.trim(),
-                            file_url: rawDownloadUrl
-                        }]);
-
-                        if (dbError) throw dbError;
-
-                        msg.innerHTML = '✅ Акт успешно опубликован!'; 
-                        msg.style.color = '#34d399';
-                        
-                        setTimeout(() => { 
-                            closeModal('add-act-modal'); 
-                            document.getElementById('add-act-form').reset(); 
-                            loadActs(); 
-                        }, 1500);
-
-                    } catch (err) {
-                        msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message); 
-                        msg.style.color = '#f87171';
-                    } finally { 
-                        btn.disabled = false; 
-                        btn.innerText = '📤 Отправить в базу и GitHub'; 
-                    }
-                };
-
-                reader.onerror = () => { throw new Error("Ошибка чтения файла браузером"); };
+                setTimeout(() => { 
+                    closeModal('add-act-modal'); 
+                    document.getElementById('add-act-form').reset(); 
+                    loadActs(); 
+                }, 1500);
 
             } catch (err) {
                 msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message); 
                 msg.style.color = '#f87171';
+            } finally { 
                 btn.disabled = false; 
-                btn.innerText = '📤 Отправить в базу и GitHub';
+                btn.innerText = '📤 Отправить в базу'; 
             }
         };
 
