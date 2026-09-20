@@ -727,10 +727,17 @@
                     historyLines.push(`==============================`);
                     
                     pastReports.forEach((rep, index) => {
+                        // Очищаем историю от предыдущих рецидивов, чтобы избежать дублирования
+                        let cleanDetails = rep.details || 'Н/Д';
+                        if (cleanDetails.includes('Суть текущего нарушения:')) {
+                            // Берем только тот текст, который идет после маркера текущего нарушения
+                            cleanDetails = cleanDetails.split('Суть текущего нарушения:').pop().trim();
+                        }
+
                         historyLines.push(`Нарушение #${index + 1}:`);
                         historyLines.push(`• Номенклатура: ${rep.nomenclature || 'SANG-MP/REPORT-...'}`);
                         historyLines.push(`• Статья: ${rep.report_type || 'Н/Д'}`);
-                        historyLines.push(`• Суть нарушения: ${rep.details || 'Н/Д'}`);
+                        historyLines.push(`• Суть нарушения: ${cleanDetails}`);
                         historyLines.push(`------------------------------`);
                     });
                     
