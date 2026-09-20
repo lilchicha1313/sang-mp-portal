@@ -438,6 +438,20 @@
         };
 
         // --- PASSKEY (WEBAUTHN) ИНТЕГРАЦИЯ ---
+        function updatePasskeyButtonState(hasPasskey) {
+            const btn = document.getElementById('passkey-enroll-btn');
+            if (!btn) return;
+            if (hasPasskey) {
+                btn.innerText = '✅ Passkey Активен';
+                btn.classList.remove('btn-blue');
+                btn.classList.add('btn-success');
+            } else {
+                btn.innerText = '🔑 Зарегистрировать Passkey';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-blue');
+            }
+        }
+
         window.registerPasskey = async function() {
             try {
                 if (!window.PublicKeyCredential) {
@@ -449,20 +463,29 @@
                 
                 const userId = currentUserData ? new TextEncoder().encode(currentUserData.id) : new TextEncoder().encode('sang_officer');
                 const userName = currentUserData ? currentUserData.full_name : 'Officer';
+                
+                const hostname = window.location.hostname;
+                const rp = (hostname && hostname !== '') ? { name: "SANG MP Terminal", id: hostname } : { name: "SANG MP Terminal" };
 
                 const publicKeyCredentialCreationOptions = {
                     challenge: challenge,
-                    rp: { name: "SANG MP Terminal", id: window.location.hostname },
+                    rp: rp,
                     user: { id: userId, name: userName, displayName: userName },
                     pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
                     timeout: 60000,
-                    attestation: "direct"
+                    attestation: "direct",
+                    authenticatorSelection: {
+                        residentKey: "required",
+                        userVerification: "preferred"
+                    }
                 };
 
                 const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
                 const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-                localStorage.setItem('sang_passkey_' + (currentUserData?.static || 'default'), credentialId);
+                const staticKey = currentUserData?.static || 'default';
+                localStorage.setItem('sang_passkey_' + staticKey, credentialId);
                 
+                updatePasskeyButtonState(true);
                 alert('✅ Passkey успешно зарегистрирован на этом устройстве!');
             } catch (err) {
                 console.error(err);
@@ -482,10 +505,37 @@
                 const challenge = new Uint8Array(32);
                 window.crypto.getRandomValues(challenge);
 
+                let allowCredentials = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('sang_passkey_')) {
+                        const credIdB64 = localStorage.getItem(key);
+                        if (credIdB64) {
+                            try {
+                                const binaryString = atob(credIdB64);
+                                const bytes = new Uint8Array(binaryString.length);
+                                for (let j = 0; j < binaryString.length; j++) {
+                                    bytes[j] = binaryString.charCodeAt(j);
+                                }
+                                allowCredentials.push({
+                                    id: bytes.buffer,
+                                    type: "public-key",
+                                    transports: ["internal", "usb", "ble", "nfc"]
+                                });
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                const hostname = window.location.hostname;
+                const rpId = (hostname && hostname !== '') ? hostname : undefined;
+
                 const publicKeyCredentialRequestOptions = {
                     challenge: challenge,
                     timeout: 60000,
-                    userVerification: "preferred"
+                    userVerification: "preferred",
+                    ...(rpId ? { rpId } : {}),
+                    ...(allowCredentials.length > 0 ? { allowCredentials } : {})
                 };
 
                 const assertion = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
@@ -494,7 +544,6 @@
                     msg.innerHTML = '✅ Passkey подтвержден! Авторизация в БД...';
                     msg.style.color = '#34d399';
                     
-                    // Загружаем первый доступный профиль офицера для сеанса
                     const { data: profiles, error } = await supabaseClient.from('unit_roster').select('*').limit(1);
                     if (error || !profiles || profiles.length === 0) {
                         throw new Error('Не удалось найти профиль офицера в базе.');
@@ -738,6 +787,11 @@
                 document.getElementById('nav-auth-btn').onclick = () => switchPanel('dashboard-panel');
                 const navReports = document.getElementById('nav-reports');
                 navReports.classList.remove('hidden'); navReports.onclick = () => { switchPanel('reports-panel'); loadReports(); };
+
+                // Проверяем наличие Passkey и обновляем статус кнопки
+                const staticKey = data.static || 'default';
+                const hasPasskey = !!localStorage.getItem('sang_passkey_' + staticKey);
+                updatePasskeyButtonState(hasPasskey);
 
                 const { data: mfaData, error: mfaError } = await supabaseClient.auth.mfa.listFactors();
                 const mfaBtn = document.getElementById('mfa-setup-btn');
