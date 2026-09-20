@@ -679,7 +679,7 @@
                 hintBox.classList.remove('hidden');
                 let summaryHTML = `Внимание! У статика <b>${violatorStatic}</b> обнаружен рецидив — одобренных нарушений: <b>${data.length}</b><br>`;
                 data.forEach((rep, idx) => {
-                    summaryHTML += `&bull; #${idx + 1} <b>[${rep.nomenclature}]</b>: ${rep.report_type}<br>`;
+                    summaryHTML += `&bull; #${idx + 1} <b>[${rep.nomenclature}]</b>:${rep.report_type}<br>`;
                 });
                 hintText.innerHTML = summaryHTML;
             } else {
@@ -723,24 +723,15 @@
 
                 if (pastReports && pastReports.length > 0) {
                     let historyLines = [];
-                    historyLines.push(`[⚠️ СИСТЕМА: ИСТОРИЯ РЕЦИДИВОВ — Всего нарушений: ${pastReports.length}]`);
-                    historyLines.push(`==============================`);
+                    // Формируем заголовок точно как на сайте
+                    historyLines.push(`⚠️ Внимание! У статика ${violatorStaticInput} обнаружен рецидив — одобренных нарушений: ${pastReports.length}`);
                     
+                    // Выводим только номер рапорта и нарушенную статью (без огромных текстов)
                     pastReports.forEach((rep, index) => {
-                        // Очищаем историю от предыдущих рецидивов, чтобы избежать дублирования
-                        let cleanDetails = rep.details || 'Н/Д';
-                        if (cleanDetails.includes('Суть текущего нарушения:')) {
-                            // Берем только тот текст, который идет после маркера текущего нарушения
-                            cleanDetails = cleanDetails.split('Суть текущего нарушения:').pop().trim();
-                        }
-
-                        historyLines.push(`Нарушение #${index + 1}:`);
-                        historyLines.push(`• Номенклатура: ${rep.nomenclature || 'SANG-MP/REPORT-...'}`);
-                        historyLines.push(`• Статья: ${rep.report_type || 'Н/Д'}`);
-                        historyLines.push(`• Суть нарушения: ${cleanDetails}`);
-                        historyLines.push(`------------------------------`);
+                        historyLines.push(`• #${index + 1} [${rep.nomenclature \vert{}\vert{} 'Н/Д'}]: ${rep.report_type || 'Н/Д'}`);
                     });
                     
+                    historyLines.push(``); // Пустая строка для визуального отступа
                     historyLines.push(`Суть текущего нарушения:`);
                     historyLines.push(baseDesc);
 
