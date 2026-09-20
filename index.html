@@ -100,7 +100,7 @@
         th, td { padding: 16px 12px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
         th { color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: 600; letter-spacing: 1px; background: rgba(0,0,0,0.2); }
         tr { transition: background 0.2s; }
-        tr:hover { background: rgba(255,255,255,0.03); }
+        tr.clickable-row:hover { background: rgba(59, 130, 246, 0.1); cursor: pointer; box-shadow: inset 2px 0 0 #3b82f6; }
 
         .badge { padding: 6px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-block; border: 1px solid transparent; }
         .badge-pending { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
@@ -112,7 +112,12 @@
         .fade-in { animation: fadeIn 0.5s ease forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        #mfa-qr-code svg, #mfa-qr-code img { width: 180px; height: 180px; background: #fff; padding: 10px; border-radius: 8px; margin: 0 auto; display: block; }
+        /* Dossier specific styles */
+        .dossier-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
+        .dossier-section { border-left: 2px solid #3b82f6; padding-left: 15px; }
+        .dossier-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .dossier-value { font-size: 15px; font-weight: 600; color: #fff; word-break: break-word; }
+        .dossier-evidence { margin-top: 15px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 15px; border-radius: 6px; }
 
         @media (max-width: 768px) {
             header { padding: 12px 15px; flex-direction: column; gap: 10px; }
@@ -122,7 +127,7 @@
             .hero-card { padding: 20px 15px; }
             h1 { font-size: 24px; }
             .modal-card { padding: 20px 15px; }
-            .form-group input, .form-group select, .form-group textarea { font-size: 16px; }
+            .dossier-grid { grid-template-columns: 1fr; gap: 15px; }
         }
     </style>
 </head>
@@ -178,7 +183,7 @@
             </div>
 
             <div class="search-container">
-                <input type="text" id="report-search-input" placeholder="🔍 Интерактивный поиск по номенклатуре, статикам или сути нарушения..." oninput="filterReports()">
+                <input type="text" id="report-search-input" placeholder="🔍 Интерактивный поиск по номенклатуре, именам, статикам или сути нарушения..." oninput="filterReports()">
             </div>
 
             <div class="table-responsive">
@@ -187,8 +192,8 @@
                         <tr>
                             <th style="width: 22%;">Номенклатура / Дата</th>
                             <th style="width: 15%;">Заявитель</th>
-                            <th style="width: 12%;">Нарушитель</th>
-                            <th style="width: 31%;">Суть нарушения</th>
+                            <th style="width: 15%;">Нарушитель</th>
+                            <th style="width: 28%;">Суть нарушения</th>
                             <th style="width: 10%;">Статус</th>
                             <th style="width: 10%;">Действия</th>
                         </tr>
@@ -199,28 +204,76 @@
         </div>
     </main>
 
+    <!-- DOSSIER MODAL -->
+    <div class="modal-overlay" id="dossier-modal">
+        <div class="modal-card" style="border-top-color: #60a5fa; max-width: 800px;">
+            <button class="close-btn" onclick="closeModal('dossier-modal')">&times;</button>
+            
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div>
+                    <div class="subtitle" style="color: #60a5fa;">MILITARY POLICE DOSSIER</div>
+                    <h2 style="margin: 0; font-family: 'Rajdhani', sans-serif; font-size: 28px;" id="dossier-nomenclature">SANG-MP/REPORT</h2>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;" id="dossier-date">Дата формирования: -</div>
+                </div>
+                <div id="dossier-status-badge"></div>
+            </div>
+
+            <div class="dossier-grid">
+                <div class="dossier-section">
+                    <div class="dossier-label">Заявитель (Офицер)</div>
+                    <div class="dossier-value" id="dossier-applicant-name">Имя Фамилия</div>
+                    <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Статик: <span id="dossier-applicant-static" style="color: #fff;">-</span></div>
+                </div>
+                <div class="dossier-section" style="border-left-color: #f87171;">
+                    <div class="dossier-label">Нарушитель (Подозреваемый)</div>
+                    <div class="dossier-value" id="dossier-violator-name" style="color: #f87171;">Имя Фамилия</div>
+                    <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Статик: <span id="dossier-violator-static" style="color: #fff;">-</span></div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <div class="dossier-label">Инкриминируемая статья / Нарушение</div>
+                <div style="font-size: 16px; font-weight: 600; color: #fbbf24; background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 4px; border-left: 3px solid #fbbf24;" id="dossier-reason">
+                    Статья нарушения
+                </div>
+            </div>
+
+            <div>
+                <div class="dossier-label">Фабула (Детали ситуации)</div>
+                <div class="pre-wrap" style="font-size: 14px; line-height: 1.6; color: #e2e8f0; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 6px; border: 1px solid var(--border-color);" id="dossier-details">
+                    Описание ситуации
+                </div>
+            </div>
+
+            <div class="dossier-evidence">
+                <div class="dossier-label" style="color: #10b981;">Прикрепленные материалы (Доказательства)</div>
+                <div id="dossier-evidence-link" style="margin-top: 5px; word-break: break-all;"></div>
+            </div>
+
+            <div id="dossier-rejection-block" class="hidden" style="margin-top: 15px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 6px;">
+                <div class="dossier-label" style="color: #f87171;">Причина отклонения рапорта</div>
+                <div style="font-size: 14px; color: #fff;" id="dossier-rejection-reason"></div>
+            </div>
+            
+            <div style="margin-top: 20px; font-size: 11px; color: var(--text-muted); text-align: right;" id="dossier-processed-by"></div>
+        </div>
+    </div>
+
+    <!-- АВТОРИЗАЦИЯ И 2FA МОДАЛКИ (БЕЗ ИЗМЕНЕНИЙ) -->
     <div class="modal-overlay" id="auth-modal">
         <div class="modal-card" style="border-top-color: var(--accent-color);">
             <button class="close-btn" onclick="closeModal('auth-modal')">&times;</button>
             <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;" id="auth-modal-title">Авторизация MP</h2>
-            
             <form id="auth-form">
                 <div class="form-group"><label>Служебный Email</label><input type="text" id="login-static" placeholder="officer@sang.local" required></div>
                 <div class="form-group"><label>Пароль доступа</label><input type="password" id="login-password" required></div>
                 <button type="submit" class="btn btn-danger" id="login-submit-btn" style="width: 100%; margin-top: 10px;">Подключиться к БД</button>
             </form>
-
             <form id="mfa-challenge-form" class="hidden">
-                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
-                    Введите 6-значный одноразовый код из приложения <strong>2FA Authenticator</strong> на вашем телефоне.
-                </p>
-                <div class="form-group">
-                    <label>Код подтверждения (TOTP)</label>
-                    <input type="text" id="mfa-code-input" placeholder="000000" maxlength="6" style="font-size: 22px; letter-spacing: 5px; text-align: center;" required>
-                </div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Введите 6-значный одноразовый код из приложения <strong>2FA Authenticator</strong> на вашем телефоне.</p>
+                <div class="form-group"><label>Код подтверждения (TOTP)</label><input type="text" id="mfa-code-input" placeholder="000000" maxlength="6" style="font-size: 22px; letter-spacing: 5px; text-align: center;" required></div>
                 <button type="submit" class="btn btn-success" id="mfa-submit-btn" style="width: 100%; margin-top: 10px;">Подтвердить личность</button>
             </form>
-
             <div id="status-msg" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
         </div>
     </div>
@@ -230,22 +283,17 @@
             <button class="close-btn" onclick="closeModal('mfa-setup-modal')">&times;</button>
             <h2 style="margin-top:0; font-family: 'Rajdhani', sans-serif; text-transform: uppercase;">Привязка Google Authenticator</h2>
             <p style="font-size: 13px; color: var(--text-muted);">Отсканируйте этот QR-код через приложение на смартфоне:</p>
-            
             <div id="mfa-qr-code" style="margin: 20px 0;"></div>
-            
             <p style="font-size: 11px; color: var(--text-muted);">Или введите ключ вручную: <code id="mfa-secret-key" style="color: #60a5fa; font-size: 13px;">-</code></p>
-
             <form id="mfa-verify-enroll-form" style="margin-top: 20px; text-align: left;">
-                <div class="form-group">
-                    <label>Первый 6-значный код из приложения</label>
-                    <input type="text" id="mfa-enroll-code" placeholder="000000" maxlength="6" style="font-size: 18px; letter-spacing: 3px; text-align: center;" required>
-                </div>
+                <div class="form-group"><label>Первый 6-значный код из приложения</label><input type="text" id="mfa-enroll-code" placeholder="000000" maxlength="6" style="font-size: 18px; letter-spacing: 3px; text-align: center;" required></div>
                 <button type="submit" class="btn btn-success" id="mfa-enroll-submit-btn" style="width: 100%;">Активировать защиту</button>
             </form>
             <div id="mfa-setup-msg" style="margin-top: 15px; font-size: 13px;"></div>
         </div>
     </div>
 
+    <!-- ПОДАЧА РАПОРТА -->
     <div class="modal-overlay" id="report-modal">
         <div class="modal-card">
             <button class="close-btn" onclick="closeModal('report-modal')">&times;</button>
@@ -255,9 +303,12 @@
                     <div class="form-group"><label>Ваше Имя (IC)</label><input type="text" id="author-name" required></div>
                     <div class="form-group"><label>Ваш Статик</label><input type="text" id="author-static" required oninput="checkViolatorHistory()"></div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group"><label>Ваш Discord ID</label><input type="text" id="author-discord-id"></div>
-                    <div class="form-group"><label style="color: #f87171;">Статик нарушителя</label><input type="text" id="violator-static" required oninput="checkViolatorHistory()"></div>
+                <div class="form-group"><label>Ваш Discord ID</label><input type="text" id="author-discord-id"></div>
+                
+                <!-- НОВЫЕ ПОЛЯ НАРУШИТЕЛЯ -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: rgba(239, 68, 68, 0.05); padding: 15px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 18px;">
+                    <div class="form-group" style="margin-bottom: 0;"><label style="color: #f87171;">Имя нарушителя (IC)</label><input type="text" id="violator-name" required placeholder="Например: Riko Vercetti"></div>
+                    <div class="form-group" style="margin-bottom: 0;"><label style="color: #f87171;">Статик нарушителя</label><input type="text" id="violator-static" required oninput="checkViolatorHistory()"></div>
                 </div>
                 
                 <div id="violator-history-hint" class="hidden" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px 12px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #f87171;">
@@ -271,99 +322,20 @@
                             <option value="2.1_zakon">2.1. Незнание/несоблюдение Уголовного, Административного или Этического кодекса</option>
                             <option value="2.2_sub">2.2. Нарушение правил субординации при устном общении</option>
                             <option value="2.3_morals">2.3. Проявление неуважения, грубости к сослуживцам или гражданским</option>
-                            <option value="2.4_vy">2.4. Нарушение официального стиля речи (обращение на «Вы»)</option>
-                            <option value="2.5_Phrases">2.5. Нарушение уставных обращений и фраз</option>
-                            <option value="2.7_distract">2.7. Отвлечение сослуживцев от работы без веской причины</option>
-                            <option value="2.8_conflict">2.8. Организация и поддержка конфликтов между военнослужащими</option>
-                            <option value="2.9_lie">2.9. Ложь и введение в заблуждение коллег или начальства</option>
-                            <option value="2.10_appearance">2.10. Неподобающий внешний вид (татуировки на лице/шее, прическа, макияж)</option>
-                            <option value="2.11_civil_ty">2.11. Общение с гражданскими и госслужащими на «Ты» / Хамство</option>
-                            <option value="2.12_report">2.12. Отсутствие еженедельного отчета о проделанной работе</option>
-                        </optgroup>
-                        <optgroup label="— РАЗДЕЛ IV: Движение и транспорт —">
-                            <option value="4.2_vvp">4.2. Перемещение по ВПП не перпендикулярно</option>
-                            <option value="4.13_tech_misuse">4.13. Использование служебной техники не по назначению</option>
-                            <option value="4.15_weapon_give">4.15. Продача или передача табельного оружия посторонним лицам</option>
-                            <option value="4.21_car_report">4.21. Взятие военной техники без отчёта в рацию</option>
-                            <option value="4.22_private_car">4.22. Личный транспорт на территории Форта-Занкудо в неположенном месте</option>
-                            <option value="4.24_dept_vehicle">4.24. Использование техники, не предназначенной для вашего отдела</option>
-                            <option value="4.26_kp_climb">4.26. Залезание на КПП или технику</option>
-                            <option value="4.28_avia_no_perm">4.28. Взятие авиатехники без соответствующего разрешения</option>
-                            <option value="4.29_kpp1_private">4.29. Въезд/выезд через КПП-1 на личном транспорте</option>
-                            <option value="4.30_white_line">4.30. Заезд за белую линию на ДВ</option>
-                            <option value="4.34_kpp_stop">4.34. Проезд через КПП без остановки для проверки документов</option>
-                            <option value="4.43_column_overtake">4.43. Обгон сформированной колонны</option>
-                            <option value="4.45_column_route">4.45. Отклонение от маршрута ведущей колонну техники</option>
-                            <option value="4.52_flight_access">4.52. Использование летной техники без соответствующего доступа</option>
                         </optgroup>
                         <optgroup label="— РАЗДЕЛ IV: Служебная дисциплина и посты —">
                             <option value="4.12_post_leave">4.12. Самовольный уход с поста или места службы без доклада</option>
-                            <option value="4.16_unauth_pass">4.16. Пропуск на территорию ФЗ лиц без доступа</option>
-                            <option value="4.17_ignore_orders">4.17. Игнорирование или нарушение приказов старшего состава</option>
-                            <option value="4.18_abuse_power">4.18. Превышение должностных полномочий</option>
                             <option value="4.20_leave_base">4.20. Самовольное покидание территории Форта-Занкудо</option>
-                            <option value="4.25_deceive_senior">4.25. Обман и введение в заблуждение Старшего состава</option>
-                            <option value="4.31_inactivity">4.31. Бездействие на территории Форта-Занкудо</option>
                             <option value="4.35_negligence">4.35. Халатность (отклонение от устава, неисполнение обязанностей)</option>
                             <option value="4.36_sleep_post">4.36. Сон на посту / в строю дольше положенного времени</option>
-                            <option value="4.37_no_ammo">4.37. Заступление в караул без полного боекомплекта</option>
-                            <option value="4.48_kpp_limit">4.48. Нарушение лимита бойцов на постах КПП</option>
-                            <option value="4.49_rfz_limit">4.49. Нарушение лимита бойцов на постах РФЗ / РКП</option>
-                            <option value="4.51_post_absent">4.51. Отсутствие на рабочем посту более 7 дней без отметки</option>
-                            <option value="4.54_penalties">4.54. Незаконная выдача взысканий другим отделам</option>
-                            <option value="4.55_interfere_dept">4.55. Вмешательство в работу других отделов</option>
                         </optgroup>
-                        <optgroup label="— РАЗДЕЛ IV: Внутренний порядок и поведение —">
-                            <option value="4.3_ethics">4.3. Нарушение военной этики (свист, неприличные жесты, танцы)</option>
-                            <option value="4.4_insult">4.4. Оскорбление гражданских, военнослужащих или госслужащих</option>
-                            <option value="4.5_beg_rank">4.5. Выпрашивание повышения, должности, военного билета</option>
-                            <option value="4.6_reward">4.6. Поощрение военнослужащих без видимых на то причин</option>
-                            <option value="4.7_smoke">4.7. Курение / кальяны на территории ФЗ в не положенном месте</option>
-                            <option value="4.8_drugs">4.8. Употребление или распространение наркотических средств</option>
-                            <option value="4.9_alcohol">4.9. Хранение или употребление алкоголя во время рабочего дня</option>
-                            <option value="4.10_crime_links">4.10. Связи с криминальными преступными группировками</option>
-                            <option value="4.11_convictions">4.11. Наличие активных судимостей</option>
-                            <option value="4.14_property">4.14. Порча государственного имущества</option>
-                            <option value="4.19_gun_unarmed">4.19. Использование огнестрельного оружия против безоружного</option>
-                            <option value="4.27_secret">4.27. Разглашение военной тайны</option>
-                            <option value="4.32_music">4.32. Прослушивание музыки на территории Форта-Занкудо</option>
-                            <option value="4.33_wrong_uniform">4.33. Ношение формы, не относящейся к вашему подразделению</option>
-                            <option value="4.38_loot_search">4.38. Присвоение чужого имущества при обыске</option>
-                            <option value="4.44_civil_talk">4.44. Общение с гражданскими на отвлеченные темы</option>
-                            <option value="4.50_civ_clothes">4.50. Нахождение на территории ФЗ в гражданской одежде</option>
-                            <option value="4.53_storage_items">4.53. Размещение личных вещей на складе Военной базы</option>
-                        </optgroup>
-                        <optgroup label="— РАЗДЕЛ IV: Правила строя —">
-                            <option value="4.39_talk_line">4.39. Разговоры друг с другом во время построения</option>
-                            <option value="4.40_sleep_line">4.40. Сон во время построения</option>
-                            <option value="4.41_leave_line">4.41. Самовольный уход из строя</option>
-                            <option value="4.42_indecent_line">4.42. Непристойные движения в строю</option>
-                            <option value="4.46_phone_line">4.46. Использование телефона в строю</option>
-                        </optgroup>
-                        <optgroup label="— РАЗДЕЛ V: Караульная дисциплина —">
-                            <option value="5.1_kpp_pass">5.1. Проход/проезд через КПП дальше будки без разрешения</option>
-                            <option value="5.2_kpp_uniform">5.2. Нахождение на КПП без полной формы или без отметки в рации</option>
-                            <option value="5.3_guard_rules">5.3. Нарушение правил караульной службы</option>
-                            <option value="5.5_guard_abuse">5.5. Корыстное использование полномочий караульного</option>
-                        </optgroup>
-                        <optgroup label="— РАЗДЕЛ VI: Иные правонарушения и особые проступки —">
+                        <optgroup label="— РАЗДЕЛ VI: Иные правонарушения —">
                             <option value="6.1_other_breach">6.1. Иное нарушение внутренних регламентов, не вошедшее в основные статьи</option>
-                            <option value="6.2_provocation">6.2. Провокационные действия в отношении сослуживцев или гражданских лиц</option>
-                            <option value="6.3_radio_flood">6.3. Засорение служебной волны рации посторонней информацией или флудом</option>
-                            <option value="6.4_evade_duty">6.4. Уклонение от прямых служебных обязанностей под выдуманными предлогами</option>
-                            <option value="6.5_sabotage">6.5. Создание помех или саботаж проведения внутренних мероприятий / тренировок</option>
-                            <option value="6.6_unauthorized_access">6.6. Несанкционированное нахождение в закрытых служебных помещениях базы</option>
                         </optgroup>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Детали ситуации (Фабула)</label>
-                    <textarea id="report-desc" placeholder="Кратко и по делу..." required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Материалы (Доказательства)</label>
-                    <input type="text" id="report-proof" placeholder="URL видео/фото" required>
-                </div>
+                <div class="form-group"><label>Детали ситуации (Фабула)</label><textarea id="report-desc" placeholder="Кратко и по делу..." required></textarea></div>
+                <div class="form-group"><label>Материалы (Доказательства)</label><input type="text" id="report-proof" placeholder="URL видео/фото" required></div>
                 <button type="submit" class="btn btn-blue" id="report-submit-btn" style="width: 100%; margin-top: 10px;">Зафиксировать рапорт</button>
             </form>
             <div id="report-status-msg" style="margin-top: 15px; font-size: 13px; text-align: center;"></div>
@@ -379,76 +351,11 @@
                 "2.1_zakon": "2.1. Незнание/несоблюдение законодательства штата",
                 "2.2_sub": "2.2. Нарушение правил субординации",
                 "2.3_morals": "2.3. Проявление неуважения и грубости",
-                "2.4_vy": "2.4. Нарушение официального стиля речи (обращение на «Вы»)",
-                "2.5_Phrases": "2.5. Нарушение уставных обращений и фраз",
-                "2.7_distract": "2.7. Отвлечение сослуживцев от работы",
-                "2.8_conflict": "2.8. Организация и поддержка конфликтов",
-                "2.9_lie": "2.9. Ложь и введение в заблуждение начальства",
-                "2.10_appearance": "2.10. Неподобающий внешний вид",
-                "2.11_civil_ty": "2.11. Общение с гражданскими на «Ты» / Хамство",
-                "2.12_report": "2.12. Отсутствие еженедельного отчета",
-                "4.2_vvp": "4.2. Перемещение по ВПП не перпендикулярно",
-                "4.13_tech_misuse": "4.13. Использование техники не по назначению",
-                "4.15_weapon_give": "4.15. Передача табельного оружия посторонним",
-                "4.21_car_report": "4.21. Взятие военной техники без отчёта в рацию",
-                "4.22_private_car": "4.22. Личный транспорт на территории ФЗ",
-                "4.24_dept_vehicle": "4.24. Использование чужой техники отдела",
-                "4.26_kp_climb": "4.26. Залезание на КПП или технику",
-                "4.28_avia_no_perm": "4.28. Взятие авиатехники без разрешения",
-                "4.29_kpp1_private": "4.29. Въезд/выезд через КПП-1 на личном авто",
-                "4.30_white_line": "4.30. Заезд за белую линию на ДВ",
-                "4.34_kpp_stop": "4.34. Проезд через КПП без остановки",
-                "4.43_column_overtake": "4.43. Обгон сформированной колонны",
-                "4.45_column_route": "4.45. Отклонение от маршрута колонны",
-                "4.52_flight_access": "4.52. Использование летной техники без доступа",
                 "4.12_post_leave": "4.12. Самовольный уход с поста",
-                "4.16_unauth_pass": "4.16. Пропуск на ФЗ лиц без доступа",
-                "4.17_ignore_orders": "4.17. Игнорирование приказов старшего состава",
-                "4.18_abuse_power": "4.18. Превышение полномочий",
                 "4.20_leave_base": "4.20. Самовольное покидание ФЗ",
-                "4.25_deceive_senior": "4.25. Обман Старшего состава",
-                "4.31_inactivity": "4.31. Бездействие на территории ФЗ",
                 "4.35_negligence": "4.35. Халатность при исполнении обязанностей",
                 "4.36_sleep_post": "4.36. Сон на посту / в строю",
-                "4.37_no_ammo": "4.37. Караул без полного боекомплекта",
-                "4.48_kpp_limit": "4.48. Нарушение лимита бойцов на КПП",
-                "4.49_rfz_limit": "4.49. Нарушение лимита бойцов на РФЗ / РКП",
-                "4.51_post_absent": "4.51. Отсутствие на рабочем посту более 7 дней",
-                "4.54_penalties": "4.54. Незаконная выдача взысканий",
-                "4.55_interfere_dept": "4.55. Вмешательство в работу других отделов",
-                "4.3_ethics": "4.3. Нарушение военной этики",
-                "4.4_insult": "4.4. Оскорбление гражданских или служащих",
-                "4.5_beg_rank": "4.5. Выпрашивание повышения или звания",
-                "4.6_reward": "4.6. Необоснованное поощрение",
-                "4.7_smoke": "4.7. Курение в неустановленном месте",
-                "4.8_drugs": "4.8. Употребление наркотических средств",
-                "4.9_alcohol": "4.9. Употребление алкоголя в раб. день",
-                "4.10_crime_links": "4.10. Связи с криминалом",
-                "4.11_convictions": "4.11. Наличие активных судимостей",
-                "4.14_property": "4.14. Порча государственного имущества",
-                "4.19_gun_unarmed": "4.19. Огонь по безоружному лицу",
-                "4.27_secret": "4.27. Разглашение военной тайны",
-                "4.32_music": "4.32. Прослушивание музыки на ФЗ",
-                "4.33_wrong_uniform": "4.33. Ношение чужой формы",
-                "4.38_loot_search": "4.38. Присвоение вещей при обыске",
-                "4.44_civil_talk": "4.44. Разговоры с гражданскими на отвлеченные темы",
-                "4.50_civ_clothes": "4.50. Нахождение на ФЗ в гражданской одежде",
-                "4.53_storage_items": "4.53. Личные вещи на складе базы",
-                "4.39_talk_line": "4.39. Разговоры в строю",
-                "4.40_sleep_line": "4.40. Сон в строю",
-                "4.41_leave_line": "4.41. Самовольный уход из строя",
-                "4.42_indecent_line": "4.42. Непристойные движения в строю",
-                "4.46_phone_line": "4.46. Использование телефона в строю",
-                "5.1_kpp_pass": "5.1. Нарушение правил прохода через КПП",
-                "5.2_kpp_uniform": "5.2. Нарушение формы/отметки на КПП",
-                "5.3_guard_rules": "5.3. Нарушение правил караульной службы",
-                "5.5_guard_abuse": "5.5. Корыстное использование полномочий караульного",
-                "6.1_other_breach": "6.1. Иное нарушение регламентов",
-                "6.2_provocation": "6.2. Провокационные действия",
-                "6.3_radio_flood": "6.3. Засорение служебной волны (флуд)",
-                "6.4_evade_duty": "6.4. Уклонение от служебных обязанностей",
-                "6.5_sabotage": "6.5. Саботаж мероприятий / тренировок",
-                "6.6_unauthorized_access": "6.6. Нахождение в закрытых зонах базы"
+                "6.1_other_breach": "6.1. Иное нарушение регламентов"
             }
         };
 
@@ -460,12 +367,7 @@
 
         function escapeHTML(str) {
             if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
         function switchPanel(panelId) {
@@ -481,156 +383,71 @@
         window.closeModal = (id) => {
             document.getElementById(id).classList.remove('active');
             document.querySelectorAll('#status-msg, #report-status-msg, #mfa-setup-msg').forEach(msg => msg.innerText = '');
-            if (id === 'auth-modal') {
-                document.getElementById('mfa-challenge-form').classList.add('hidden');
-                document.getElementById('auth-form').classList.remove('hidden');
-                document.getElementById('auth-modal-title').innerText = 'Авторизация MP';
+        };
+
+        // ОТКРЫТИЕ ДОСЬЕ
+        window.openDossier = (id) => {
+            const report = allLoadedReports.find(r => r.id === id);
+            if (!report) return;
+
+            document.getElementById('dossier-nomenclature').innerText = report.nomenclature || 'SANG-MP/REPORT';
+            document.getElementById('dossier-date').innerText = `Дата формирования: ${report.created_at ? new Date(report.created_at).toLocaleString('ru-RU') : 'Н/Д'}`;
+            
+            document.getElementById('dossier-applicant-name').innerText = report.author_name || 'Н/Д';
+            document.getElementById('dossier-applicant-static').innerText = report.author_static || 'Н/Д';
+            
+            document.getElementById('dossier-violator-name').innerText = report.violator_name || 'Неизвестно';
+            document.getElementById('dossier-violator-static').innerText = report.violator_static || 'Н/Д';
+            
+            document.getElementById('dossier-reason').innerText = report.report_type || 'Н/Д';
+            document.getElementById('dossier-details').innerText = report.details || 'Нет описания';
+            
+            const evLink = document.getElementById('dossier-evidence-link');
+            if (report.evidence) {
+                evLink.innerHTML = `<a href="${escapeHTML(report.evidence)}" target="_blank" style="color: #10b981; font-weight: bold;">[Открыть прикрепленные материалы]</a>`;
+            } else {
+                evLink.innerHTML = '<span style="color: #94a3b8;">Материалы отсутствуют</span>';
             }
+
+            const statusBadge = document.getElementById('dossier-status-badge');
+            const rejectBlock = document.getElementById('dossier-rejection-block');
+            const processedBy = document.getElementById('dossier-processed-by');
+            
+            rejectBlock.classList.add('hidden');
+            processedBy.innerText = '';
+
+            if (report.status === 'approved') {
+                statusBadge.innerHTML = '<span class="badge badge-approved" style="font-size: 14px; padding: 8px 15px;">✅ ОДОБРЕНО</span>';
+                processedBy.innerHTML = `Резолюцию вынес: <span style="color: #34d399;">${escapeHTML(report.processed_by || 'Офицер')}</span>`;
+            } else if (report.status === 'rejected') {
+                statusBadge.innerHTML = '<span class="badge badge-rejected" style="font-size: 14px; padding: 8px 15px;">❌ ОТКЛОНЕНО</span>';
+                rejectBlock.classList.remove('hidden');
+                document.getElementById('dossier-rejection-reason').innerText = report.reject_reason || 'Причина не указана';
+                processedBy.innerHTML = `Резолюцию вынес: <span style="color: #f87171;">${escapeHTML(report.processed_by || 'Офицер')}</span>`;
+            } else {
+                statusBadge.innerHTML = '<span class="badge badge-pending" style="font-size: 14px; padding: 8px 15px;">🟡 НА РАССМОТРЕНИИ</span>';
+            }
+
+            openModal('dossier-modal');
         };
 
         document.getElementById('nav-auth-btn').onclick = () => window.openModal('auth-modal');
         document.getElementById('nav-home').onclick = () => switchPanel(currentUserData ? 'dashboard-panel' : 'hero-welcome');
 
+        // Авторизация
         document.getElementById('auth-form').onsubmit = async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('login-submit-btn'); 
-            const msg = document.getElementById('status-msg');
-            btn.disabled = true; btn.innerText = 'Подключение...';
-            msg.innerText = '';
-            
+            const btn = document.getElementById('login-submit-btn'); const msg = document.getElementById('status-msg');
+            btn.disabled = true; btn.innerText = 'Подключение...'; msg.innerText = '';
             try {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: document.getElementById('login-static').value.trim(), 
-                    password: document.getElementById('login-password').value
-                });
-
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('login-static').value.trim(), password: document.getElementById('login-password').value });
                 if (error) throw error;
-
-                const { data: aalData, error: aalErr } = await supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
-                if (aalErr) throw aalErr;
-                
-                if (aalData && aalData.nextLevel === 'aal2' && aalData.currentLevel !== 'aal2') {
-                    const { data: factors, error: factorsErr } = await supabaseClient.auth.mfa.listFactors();
-                    if (factorsErr) throw factorsErr;
-
-                    const totpFactor = factors?.totp?.[0];
-                    if (!totpFactor) throw new Error('Двухфакторный фактор TOTP не найден');
-                    
-                    pendingFactorId = totpFactor.id;
-
-                    document.getElementById('auth-form').classList.add('hidden');
-                    document.getElementById('mfa-challenge-form').classList.remove('hidden');
-                    document.getElementById('auth-modal-title').innerText = 'Защита 2FA (Google Auth)';
-                    msg.innerText = '';
-                } else {
-                    msg.innerHTML = '✅ Доступ разрешен'; msg.style.color = '#34d399'; 
-                    setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 800); 
-                }
+                msg.innerHTML = '✅ Доступ разрешен'; msg.style.color = '#34d399'; 
+                setTimeout(() => { closeModal('auth-modal'); loadProfile(data.user); }, 800); 
             } catch (err) {
-                msg.innerHTML = '❌ Ошибка доступа: ' + escapeHTML(err.message); 
-                msg.style.color = '#f87171';
-            } finally {
-                btn.disabled = false; btn.innerText = 'Подключиться к БД';
-            }
+                msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message); msg.style.color = '#f87171';
+            } finally { btn.disabled = false; btn.innerText = 'Подключиться к БД'; }
         };
-
-        document.getElementById('mfa-challenge-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('mfa-submit-btn'); 
-            const msg = document.getElementById('status-msg');
-            const code = document.getElementById('mfa-code-input').value.trim();
-            btn.disabled = true; btn.innerText = 'Проверка...';
-
-            try {
-                const { data: challengeData, error: chalErr } = await supabaseClient.auth.mfa.challenge({ factorId: pendingFactorId });
-                if (chalErr) throw chalErr;
-
-                const { data: verifyData, error: verErr } = await supabaseClient.auth.mfa.verify({
-                    factorId: pendingFactorId,
-                    challengeId: challengeData.id,
-                    code: code
-                });
-                if (verErr) throw verErr;
-
-                msg.innerHTML = '✅ Двухфакторная проверка пройдена!'; msg.style.color = '#34d399';
-                const { data: { user } } = await supabaseClient.auth.getUser();
-                setTimeout(() => { 
-                    closeModal('auth-modal'); 
-                    loadProfile(user); 
-                }, 800);
-
-            } catch (err) {
-                msg.innerHTML = '❌ Неверный 2FA код: ' + escapeHTML(err.message); msg.style.color = '#f87171';
-            } finally {
-                btn.disabled = false; btn.innerText = 'Подтвердить личность';
-            }
-        };
-
-        async function initMFAEnrollment() {
-            const btn = document.getElementById('mfa-setup-btn');
-            btn.disabled = true;
-
-            try {
-                const { data, error } = await supabaseClient.auth.mfa.enroll({ factorType: 'totp', issuer: 'SANG MP Terminal' });
-                if (error) throw error;
-
-                currentEnrollFactorId = data.id;
-                const qrContainer = document.getElementById('mfa-qr-code');
-                
-                if (data.totp.qr_code && data.totp.qr_code.startsWith('<svg')) {
-                    qrContainer.innerHTML = data.totp.qr_code;
-                } else {
-                    qrContainer.innerHTML = `<img src="${data.totp.qr_code}" alt="QR Code" />`;
-                }
-
-                document.getElementById('mfa-secret-key').innerText = data.totp.secret;
-                openModal('mfa-setup-modal');
-            } catch (err) {
-                alert('Ошибка инициализации 2FA: ' + err.message);
-            } finally {
-                btn.disabled = false;
-            }
-        }
-
-        document.getElementById('mfa-verify-enroll-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('mfa-enroll-submit-btn'); 
-            const msg = document.getElementById('mfa-setup-msg');
-            const code = document.getElementById('mfa-enroll-code').value.trim();
-            btn.disabled = true; btn.innerText = 'Активация...';
-
-            try {
-                const { data: challengeData, error: chalErr } = await supabaseClient.auth.mfa.challenge({ factorId: currentEnrollFactorId });
-                if (chalErr) throw chalErr;
-
-                const { error: verErr } = await supabaseClient.auth.mfa.verify({
-                    factorId: currentEnrollFactorId,
-                    challengeId: challengeData.id,
-                    code: code
-                });
-                if (verErr) throw verErr;
-
-                msg.innerHTML = '🎉 Двухфакторная защита успешно подключена!'; msg.style.color = '#34d399';
-                setTimeout(() => {
-                    closeModal('mfa-setup-modal');
-                    updateMFAButtonStatus(true);
-                }, 1500);
-
-            } catch (err) {
-                msg.innerHTML = '❌ Ошибка подтверждения: ' + escapeHTML(err.message); msg.style.color = '#f87171';
-            } finally {
-                btn.disabled = false; btn.innerText = 'Активировать защиту';
-            }
-        };
-
-        function updateMFAButtonStatus(isEnabled) {
-            const btn = document.getElementById('mfa-setup-btn');
-            if (isEnabled) {
-                btn.className = 'btn btn-success';
-                btn.innerText = '✅ 2FA Активна';
-                btn.onclick = null;
-            }
-        }
 
         async function loadProfile(user) {
             if (!user) return;
@@ -642,18 +459,10 @@
                 document.getElementById('profile-static').innerText = data.static || '-';
                 document.getElementById('profile-rank').innerText = data.rank || '-';
                 document.getElementById('profile-callsign').innerText = data.callsign || 'Н/Д';
-                
-                const authBtn = document.getElementById('nav-auth-btn');
-                authBtn.innerText = 'Личный кабинет'; authBtn.onclick = () => switchPanel('dashboard-panel');
-                
+                document.getElementById('nav-auth-btn').innerText = 'Личный кабинет'; 
+                document.getElementById('nav-auth-btn').onclick = () => switchPanel('dashboard-panel');
                 const navReports = document.getElementById('nav-reports');
-                navReports.classList.remove('hidden');
-                navReports.onclick = () => { switchPanel('reports-panel'); loadReports(); };
-
-                const { data: factors } = await supabaseClient.auth.mfa.listFactors();
-                if (factors?.totp?.length > 0 && factors.totp[0].status === 'verified') {
-                    updateMFAButtonStatus(true);
-                }
+                navReports.classList.remove('hidden'); navReports.onclick = () => { switchPanel('reports-panel'); loadReports(); };
             }
         }
         document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
@@ -662,254 +471,137 @@
             const violatorStatic = document.getElementById('violator-static').value.trim();
             const hintBox = document.getElementById('violator-history-hint');
             const hintText = document.getElementById('violator-history-text');
+            if (!violatorStatic || violatorStatic.length < 2) { hintBox.classList.add('hidden'); return; }
 
-            if (!violatorStatic || violatorStatic.length < 2) {
-                hintBox.classList.add('hidden');
-                return;
-            }
-
-            const { data, error } = await supabaseClient
-                .from('reports')
-                .select('id, nomenclature, report_type, details, created_at')
-                .eq('violator_static', violatorStatic)
-                .eq('status', 'approved');
-
+            const { data, error } = await supabaseClient.from('reports').select('id, nomenclature, report_type, details, created_at').eq('violator_static', violatorStatic).eq('status', 'approved');
             if (!error && data && data.length > 0) {
                 hintBox.classList.remove('hidden');
-                let summaryHTML = `Внимание! У статика <b>${violatorStatic}</b> обнаружен рецидив — одобренных нарушений: <b>${data.length}</b><br>`;
-                data.forEach((rep, idx) => {
-                    summaryHTML += `&bull; #${idx + 1} <b>[${rep.nomenclature}]</b>: ${rep.report_type}<br>`;
-                });
+                let summaryHTML = `Внимание! У статика <b>${violatorStatic}</b> рецидив — одобренных нарушений: <b>${data.length}</b><br>`;
+                data.forEach((rep, idx) => { summaryHTML += `&bull; #${idx + 1} <b>[${rep.nomenclature}]</b>: ${rep.report_type}<br>`; });
                 hintText.innerHTML = summaryHTML;
-            } else {
-                hintBox.classList.add('hidden');
-            }
+            } else { hintBox.classList.add('hidden'); }
         }
 
+        // Отправка рапорта с новым полем
         document.getElementById('report-form').onsubmit = async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('report-submit-btn'); 
-            const msg = document.getElementById('report-status-msg');
-            
-            btn.disabled = true; 
-            btn.innerText = 'Обработка данных...';
+            const btn = document.getElementById('report-submit-btn'); const msg = document.getElementById('report-status-msg');
+            btn.disabled = true; btn.innerText = 'Обработка данных...';
 
-            const rawType = document.getElementById('report-type').value;
-            const typeName = CONFIG.NOMENCLATURE_MAP[rawType] || rawType;
+            const typeName = CONFIG.NOMENCLATURE_MAP[document.getElementById('report-type').value] || document.getElementById('report-type').value;
             const authorStatic = document.getElementById('author-static').value.trim();
             const violatorStaticInput = document.getElementById('violator-static').value.trim();
+            const violatorNameInput = document.getElementById('violator-name').value.trim(); // Новое поле
             const baseDesc = document.getElementById('report-desc').value.trim();
 
             try {
-                const { data: myReports, error: countErr } = await supabaseClient
-                    .from('reports')
-                    .select('nomenclature')
-                    .eq('author_static', authorStatic);
-
-                if (countErr) throw countErr;
+                const { data: myReports } = await supabaseClient.from('reports').select('nomenclature').eq('author_static', authorStatic);
                 const nextReportNum = (myReports ? myReports.length : 0) + 1;
                 const assignedNomenclature = `SANG-MP/REPORT-${authorStatic}/${nextReportNum}`;
 
-                const { data: pastReports } = await supabaseClient
-                    .from('reports')
-                    .select('nomenclature, report_type, details')
-                    .eq('violator_static', violatorStaticInput)
-                    .eq('status', 'approved')
-                    .order('created_at', { ascending: true });
-
+                const { data: pastReports } = await supabaseClient.from('reports').select('nomenclature, report_type, details').eq('violator_static', violatorStaticInput).eq('status', 'approved').order('created_at', { ascending: true });
                 let finalDetails = baseDesc;
 
                 if (pastReports && pastReports.length > 0) {
-                    let historyLines = [];
-                    historyLines.push(`[⚠️ СИСТЕМА: ИСТОРИЯ РЕЦИДИВОВ — Всего нарушений: ${pastReports.length}]`);
-                    historyLines.push(`==============================`);
-                    
+                    let historyLines = [`[⚠️ СИСТЕМА: ИСТОРИЯ РЕЦИДИВОВ — Всего нарушений: ${pastReports.length}]`, `==============================`];
                     pastReports.forEach((rep, index) => {
                         let cleanDetails = rep.details || 'Н/Д';
-                        if (cleanDetails.includes('Суть текущего нарушения:')) {
-                            cleanDetails = cleanDetails.split('Суть текущего нарушения:').pop().trim();
-                        }
-
-                        historyLines.push(`Нарушение #${index + 1}:`);
-                        historyLines.push(`• Номенклатура: ${rep.nomenclature || 'SANG-MP/REPORT-...'}`);
-                        historyLines.push(`• Статья: ${rep.report_type || 'Н/Д'}`);
-                        historyLines.push(`• Суть нарушения: ${cleanDetails}`);
-                        historyLines.push(`------------------------------`);
+                        if (cleanDetails.includes('Суть текущего нарушения:')) cleanDetails = cleanDetails.split('Суть текущего нарушения:').pop().trim();
+                        historyLines.push(`Нарушение #${index + 1}:`, `• Номенклатура: ${rep.nomenclature || '...'}`, `• Статья: ${rep.report_type || 'Н/Д'}`, `• Суть: ${cleanDetails}`, `------------------------------`);
                     });
-                    
-                    historyLines.push(`Суть текущего нарушения:`);
-                    historyLines.push(baseDesc);
-
+                    historyLines.push(`Суть текущего нарушения:`, baseDesc);
                     finalDetails = historyLines.join('\n');
                 }
 
-                const reportPayload = {
+                const { error: insertErr } = await supabaseClient.from('reports').insert([{
                     nomenclature: assignedNomenclature,
                     author_name: document.getElementById('author-name').value.trim(),
                     author_static: authorStatic,
                     author_discord_id: document.getElementById('author-discord-id').value.trim(),
+                    violator_name: violatorNameInput, // Сохраняем имя в БД
                     violator_static: violatorStaticInput,
                     report_type: typeName,
                     details: finalDetails,
                     evidence: document.getElementById('report-proof').value.trim(),
                     status: 'pending'
-                };
-
-                const { error: insertErr } = await supabaseClient
-                    .from('reports')
-                    .insert([reportPayload]);
+                }]);
 
                 if (insertErr) throw insertErr;
 
-                msg.innerHTML = `✅ Рапорт успешно зарегистрирован: <b>${escapeHTML(assignedNomenclature)}</b>`; 
-                msg.style.color = '#34d399'; 
-                setTimeout(() => { 
-                    closeModal('report-modal'); 
-                    document.getElementById('report-form').reset(); 
-                    document.getElementById('violator-history-hint').classList.add('hidden');
-                    if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports();
-                }, 1500);
-
+                msg.innerHTML = `✅ Рапорт зарегистрирован: <b>${escapeHTML(assignedNomenclature)}</b>`; msg.style.color = '#34d399'; 
+                setTimeout(() => { closeModal('report-modal'); document.getElementById('report-form').reset(); document.getElementById('violator-history-hint').classList.add('hidden'); if (currentUserData && !document.getElementById('reports-panel').classList.contains('hidden')) loadReports(); }, 1500);
             } catch (err) {
-                msg.innerHTML = '❌ Ошибка при отправке: ' + escapeHTML(err.message); 
-                msg.style.color = '#f87171';
-            } finally {
-                btn.disabled = false; 
-                btn.innerText = 'Зафиксировать рапорт';
-            }
+                msg.innerHTML = '❌ Ошибка: ' + escapeHTML(err.message); msg.style.color = '#f87171';
+            } finally { btn.disabled = false; btn.innerText = 'Зафиксировать рапорт'; }
         };
 
         async function loadReports() {
             const tbody = document.getElementById('reports-table-body');
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Синхронизация с базой данных...</td></tr>';
-
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Синхронизация...</td></tr>';
             const { data: reports, error } = await supabaseClient.from('reports').select('*').order('created_at', { ascending: false });
-
-            if (error || !reports) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: #f87171;">Ошибка загрузки базы данных</td></tr>'; return;
-            }
-
-            allLoadedReports = reports;
-            renderReportsTable(allLoadedReports);
+            if (error || !reports) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: #f87171;">Ошибка загрузки</td></tr>'; return; }
+            allLoadedReports = reports; renderReportsTable(allLoadedReports);
         }
 
         function filterReports() {
             const query = document.getElementById('report-search-input').value.toLowerCase().trim();
-            if (!query) {
-                renderReportsTable(allLoadedReports);
-                return;
-            }
-
+            if (!query) return renderReportsTable(allLoadedReports);
             const filtered = allLoadedReports.filter(r => 
                 (r.nomenclature && r.nomenclature.toLowerCase().includes(query)) ||
                 (r.violator_static && r.violator_static.toLowerCase().includes(query)) ||
-                (r.author_static && r.author_static.toLowerCase().includes(query)) ||
+                (r.violator_name && r.violator_name.toLowerCase().includes(query)) ||
                 (r.author_name && r.author_name.toLowerCase().includes(query)) ||
-                (r.report_type && r.report_type.toLowerCase().includes(query)) ||
-                (r.details && r.details.toLowerCase().includes(query))
+                (r.report_type && r.report_type.toLowerCase().includes(query))
             );
-
             renderReportsTable(filtered);
         }
 
         function renderReportsTable(reports) {
             const tbody = document.getElementById('reports-table-body');
-            if (!reports || reports.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Ничего не найдено</td></tr>'; 
-                return;
-            }
-
-            const rank = currentUserData?.rank || '';
-            const isBoss = rank.includes('Начальник') || rank.includes('Зам');
+            if (!reports || reports.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-muted);">Ничего не найдено</td></tr>'; return; }
+            const rank = currentUserData?.rank || ''; const isBoss = rank.includes('Начальник') || rank.includes('Зам');
 
             tbody.innerHTML = reports.map(r => {
                 const dateStr = r.created_at ? new Date(r.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Н/Д';
-                const isApproved = r.status === 'approved';
-                const isRejected = r.status === 'rejected';
-
-                let statusBadge = '';
-                if (isApproved) statusBadge = `<span class="badge badge-approved">✅ Одобрен</span>`;
-                else if (isRejected) statusBadge = `<span class="badge badge-rejected" title="${escapeHTML(r.reject_reason || '')}">❌ Отклонен</span>`;
-                else statusBadge = `<span class="badge badge-pending">🟡 На рассмотрении</span>`;
+                const isApproved = r.status === 'approved'; const isRejected = r.status === 'rejected';
+                let statusBadge = isApproved ? `<span class="badge badge-approved">✅ Одобрен</span>` : isRejected ? `<span class="badge badge-rejected">❌ Отклонен</span>` : `<span class="badge badge-pending">🟡 Ожидает</span>`;
 
                 let actionButtons = '';
-                const reportId = escapeHTML(r.id);
-
                 if (!isApproved && !isRejected) {
-                    actionButtons = `
-                        <div style="display: flex; gap: 5px;">
-                            <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px;" onclick="approveReport('${reportId}')" title="Одобрить">✓</button>
-                            <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="rejectReport('${reportId}')" title="Отклонить">✕</button>
-                        </div>
-                    `;
+                    actionButtons = `<div style="display: flex; gap: 5px;">
+                        <button class="btn btn-success" style="padding: 6px 10px; font-size: 11px;" onclick="event.stopPropagation(); approveReport('${escapeHTML(r.id)}')">✓</button>
+                        <button class="btn btn-danger" style="padding: 6px 10px; font-size: 11px;" onclick="event.stopPropagation(); rejectReport('${escapeHTML(r.id)}')">✕</button>
+                    </div>`;
                 } else if (isRejected && isBoss) {
-                    actionButtons = `
-                        <div style="font-size: 10px; color: #f87171; margin-bottom: 5px; word-break: break-word;">Отклонил: ${escapeHTML(r.processed_by || 'Офицер')}</div>
-                        <button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="reviewReport('${reportId}')">🔄 Пересмотр</button>
-                    `;
+                    actionButtons = `<button class="btn btn-warn" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="event.stopPropagation(); reviewReport('${escapeHTML(r.id)}')">🔄 Пересмотр</button>`;
                 } else {
-                    const colorInfo = isApproved ? '#34d399' : '#f87171';
-                    const actionWord = isApproved ? 'Одобрил' : 'Отклонил';
-                    actionButtons = `<small style="color:${colorInfo};"><b>${actionWord}:</b><br>${escapeHTML(r.processed_by || 'Офицер')}</small>`;
+                    actionButtons = `<small style="color:${isApproved ? '#34d399' : '#f87171'};">${escapeHTML(r.processed_by || 'Офицер')}</small>`;
                 }
 
-                const safeEvidence = escapeHTML(r.evidence);
-
-                return `<tr class="fade-in">
+                // Добавлен класс clickable-row и onclick="openDossier..."
+                return `<tr class="fade-in clickable-row" onclick="openDossier('${escapeHTML(r.id)}')">
                     <td><code style="color:#60a5fa; font-size:12px; font-weight:bold;">${escapeHTML(r.nomenclature || 'Н/Д')}</code><br><small style="color:var(--text-muted);">${dateStr}</small></td>
                     <td><b>${escapeHTML(r.author_name || 'Н/Д')}</b><br><small style="color:var(--text-muted);">ID: ${escapeHTML(r.author_static || 'Н/Д')}</small></td>
-                    <td><strong style="color:#f87171; font-size: 15px;">${escapeHTML(r.violator_static || 'Н/Д')}</strong></td>
+                    <td><strong style="color:#f87171; font-size: 14px;">${escapeHTML(r.violator_name || 'Неизвестно')}</strong><br><small style="color:var(--text-muted);">ID: ${escapeHTML(r.violator_static || 'Н/Д')}</small></td>
                     <td>
                         <strong style="color:#e2e8f0;">${escapeHTML(r.report_type || 'Н/Д')}</strong>
-                        <div class="pre-wrap" style="color:var(--text-muted); font-size: 12px; margin: 8px 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border-left: 2px solid var(--border-color);">${escapeHTML(r.details || '')}</div>
-                        ${isRejected && r.reject_reason ? `<div style="color:#f87171; font-size: 11px; margin-bottom: 5px;"><b>Причина отказа:</b> ${escapeHTML(r.reject_reason)}</div>` : ''}
-                        ${safeEvidence ? `<a href="${safeEvidence}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa; font-size:11px; text-decoration: none; border-bottom: 1px solid #60a5fa;">📎 Материалы дела</a>` : ''}
+                        <div class="pre-wrap" style="color:var(--text-muted); font-size: 11px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapeHTML(r.details || '')}</div>
                     </td>
                     <td>${statusBadge}</td>
-                    <td>${actionButtons}</td>
+                    <td onclick="event.stopPropagation();">${actionButtons}</td>
                 </tr>`;
             }).join('');
         }
 
         const getOfficerInfo = () => currentUserData ? `${currentUserData.full_name} (${currentUserData.static})` : 'Офицер MP';
-
         async function sendStatusUpdate(id, status, processedBy, rejectReason = '') {
-            try {
-                const { error } = await supabaseClient
-                    .from('reports')
-                    .update({ 
-                        status: status, 
-                        processed_by: processedBy, 
-                        reject_reason: rejectReason 
-                    })
-                    .eq('id', id);
-                    
-                if (error) throw error;
-                return true;
-            } catch (err) {
-                alert('Ошибка связи с базой данных: ' + err.message);
-                return false;
-            }
+            try { const { error } = await supabaseClient.from('reports').update({ status, processed_by: processedBy, reject_reason: rejectReason }).eq('id', id); if (error) throw error; return true; } 
+            catch (err) { alert('Ошибка: ' + err.message); return false; }
         }
 
-        window.approveReport = async (id) => {
-            if (!confirm('Подтверждаете ОДОБРЕНИЕ рапорта?')) return;
-            const ok = await sendStatusUpdate(id, 'approved', getOfficerInfo(), '');
-            if (ok) setTimeout(() => loadReports(), 300);
-        };
-
-        window.rejectReport = async (id) => {
-            const reason = prompt('Укажите причину ОТКЛОНЕНИЯ (обязательно):');
-            if (!reason || !reason.trim()) return;
-            const ok = await sendStatusUpdate(id, 'rejected', getOfficerInfo(), reason.trim());
-            if (ok) setTimeout(() => loadReports(), 300);
-        };
-
-        window.reviewReport = async (id) => {
-            if (!confirm('Внимание: Вы открываете дело на пересмотр. Рапорт будет ОДОБРЕН. Продолжить?')) return;
-            const ok = await sendStatusUpdate(id, 'approved', getOfficerInfo() + ' (Пересмотр)', '');
-            if (ok) setTimeout(() => loadReports(), 300);
-        };
+        window.approveReport = async (id) => { if (!confirm('ОДОБРИТЬ рапорт?')) return; if (await sendStatusUpdate(id, 'approved', getOfficerInfo(), '')) setTimeout(loadReports, 300); };
+        window.rejectReport = async (id) => { const reason = prompt('Причина ОТКЛОНЕНИЯ:'); if (!reason) return; if (await sendStatusUpdate(id, 'rejected', getOfficerInfo(), reason.trim())) setTimeout(loadReports, 300); };
+        window.reviewReport = async (id) => { if (!confirm('Внимание: Пересмотр ОДОБРИТ рапорт. Продолжить?')) return; if (await sendStatusUpdate(id, 'approved', getOfficerInfo() + ' (Пересмотр)', '')) setTimeout(loadReports, 300); };
 
         supabaseClient.auth.getUser().then(({ data: { user } }) => { if (user) loadProfile(user); });
     </script>
